@@ -249,7 +249,7 @@ sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tphotobooth/' /etc/hosts 2>/dev/null || \
 # PHASE 5 — Nettoyage d'identité
 #   « Image jamais bootée » => identité largement propre par construction.
 #   On vide machine-id (régénéré au boot) par ceinture+bretelles. Les clés
-#   d'hôte SSH sont (re)générées au 1er boot par RPi OS et par PiShrink -c.
+#   d'hôte SSH sont (re)générées au 1er boot par RPi OS (regenerate-ssh-host-keys).
 # -----------------------------------------------------------------------------
 say "Nettoyage d'identité."
 : > /etc/machine-id || true

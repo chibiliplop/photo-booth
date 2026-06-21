@@ -45,11 +45,12 @@ docker run --rm --privileged \
     -e PI_PASSWORD="$PI_PASSWORD" \
     ghcr.io/octoprint/custopizer:latest
 
-echo "==> 5/5  PiShrink -acZ (auto-expand + régénération clés SSH + xz)"
+echo "==> 5/5  PiShrink -aZ (auto-expand + xz parallèle)"
 [ -f "$HERE/pishrink.sh" ] || curl -fL -o "$HERE/pishrink.sh" \
     https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
 chmod +x "$HERE/pishrink.sh"
-sudo "$HERE/pishrink.sh" -acZ "$HERE/output.img" "$HERE/photobooth-dist.img"
+# -aZ uniquement : '-c' n'existe pas dans PiShrink (master) et le fait sortir en erreur.
+sudo "$HERE/pishrink.sh" -aZ "$HERE/output.img" "$HERE/photobooth-dist.img"
 
 echo
 echo "OK -> $HERE/photobooth-dist.img.xz"

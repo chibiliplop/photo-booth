@@ -73,11 +73,15 @@ jobs:
             -e PHOTOBOOTH_OVERLAY=${{ steps.flags.outputs.overlay }} \
             ghcr.io/octoprint/custopizer:latest
 
-      - name: Shrink + compress (PiShrink -acZ)
+      - name: Shrink + compress (PiShrink -aZ)
         run: |
           curl -fL -o pishrink.sh https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
           chmod +x pishrink.sh
-          sudo ./pishrink.sh -acZ image-builder/output.img photobooth-dist.img
+          # -a = compression parallèle, -Z = xz. PAS de '-c' : PiShrink (master) ne
+          # connaît pas ce flag (getopts ":adnhrsvzZ") et sort en erreur dessus.
+          # La régénération des clés d'hôte SSH est faite par RPi OS au 1er boot,
+          # pas par PiShrink.
+          sudo ./pishrink.sh -aZ image-builder/output.img photobooth-dist.img
           ls -lh photobooth-dist.img.xz
 
       - name: Upload artifact

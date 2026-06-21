@@ -82,7 +82,7 @@ et l'avertit dans les logs.
 ## Distribuer (PHASE 6) — le piège Imager
 
 L'image est turnkey, sans secret embarqué (jamais bootée → pas de `machine-id`,
-clés SSH régénérées par PiShrink `-c`). Au flashage :
+clés SSH régénérées par RPi OS au 1er boot). Au flashage :
 
 - **Ne JAMAIS activer la « customisation OS » de Raspberry Pi Imager** (Wi-Fi /
   SSH / hostname) sur l'image dist : Imager **mémorise** et **ré-applique

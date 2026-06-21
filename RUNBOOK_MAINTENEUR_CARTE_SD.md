@@ -366,7 +366,7 @@ sudo truncate -s 0 /etc/machine-id
 sudo rm -f /var/lib/dbus/machine-id
 sudo ln -sf /etc/machine-id /var/lib/dbus/machine-id
 
-# Clés d'hôte SSH (seront regenerees ; PiShrink -c s'en charge aussi, ceinture+bretelles)
+# Clés d'hôte SSH : on les supprime ; RPi OS les régénère au 1er boot.
 sudo rm -f /etc/ssh/ssh_host_*
 
 # Connexion Wi-Fi de test (l'image ne doit pas embarquer un SSID de labo)
@@ -409,15 +409,15 @@ sudo dd if=/dev/sdX of=photobooth-golden.img bs=4M status=progress conv=fsync
 ```bash
 wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
 chmod +x pishrink.sh
-sudo ./pishrink.sh -ac photobooth-golden.img photobooth-dist.img
+sudo ./pishrink.sh photobooth-golden.img photobooth-dist.img
 ```
 
-- `-a` : auto-expand de la partition au premier boot (remplit la carte cible quelle que soit sa taille).
-- `-c` : régénère les clés SSH au premier boot (évite les clés dupliquées sur toute la flotte).
-- PiShrink compresse en `.img.xz` si on ajoute `-Z` (xz) ou `-z` (gzip) ; pour distribuer :
+- L'**auto-expand** de la partition au premier boot (remplit la carte cible quelle que soit sa taille) est le **comportement par défaut** de PiShrink ; `-s` le désactiverait.
+- Les **clés d'hôte SSH** sont régénérées au premier boot par Raspberry Pi OS (service `regenerate-ssh-host-keys`), pas par PiShrink. ⚠️ PiShrink n'a **pas** de flag `-c` (getopts `":adnhrsvzZ"`) : le lui passer le fait sortir en erreur.
+- PiShrink compresse en `.img.xz` si on ajoute `-Z` (xz) ou `-z` (gzip) ; `-a` parallélise la compression. Pour distribuer :
 
 ```bash
-sudo ./pishrink.sh -acZ photobooth-golden.img photobooth-dist.img
+sudo ./pishrink.sh -aZ photobooth-golden.img photobooth-dist.img
 # produit photobooth-dist.img.xz
 ```
 
@@ -507,7 +507,7 @@ Tant que **l'OS ne change pas**, une nouvelle version de l'app = remplacer `publ
 
 **Distribution**
 - [ ] `dd`/Win32DiskImager → `photobooth-golden.img`.
-- [ ] PiShrink `-acZ` → `photobooth-dist.img.xz` (auto-expand + régénération clés SSH).
+- [ ] PiShrink `-aZ` → `photobooth-dist.img.xz` (auto-expand par défaut ; clés SSH régénérées par RPi OS au 1er boot).
 - [ ] Test final : flasher une carte neuve avec le `.img.xz`, premier boot → borne opérationnelle sans aucune intervention terminal.
 
 ---
@@ -534,7 +534,7 @@ Ce qui est livré :
    incluses (pas d'interactif en chroot).
 2. **`image-builder/build-local.sh`** — pipeline complet en local (WSL2/Linux + Docker).
 3. **`.github/workflows/build-image.yml`** — `dotnet publish` → QEMU → CustoPiZer
-   → PiShrink `-acZ` → artefact / Release. **Aucun secret embarqué** (modèles neutres).
+   → PiShrink `-aZ` → artefact / Release. **Aucun secret embarqué** (modèles neutres).
 
 Source de vérité unique = **`deploy/`** : la CI/le script y copient `deploy/` +
 `publish/` dans `scripts/files/` le temps du build (zéro duplication).

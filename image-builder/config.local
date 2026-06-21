@@ -2,7 +2,7 @@
 # Monté via:  docker run ... -v $(pwd)/config.local:/CustoPiZer/config.local
 #
 # On agrandit le root AVANT personnalisation : l'image Lite a peu d'espace libre
-# et on y ajoute ~150 Mo (paquets + binaire .NET self-contained). PiShrink (-acZ,
+# et on y ajoute ~150 Mo (paquets + binaire .NET self-contained). PiShrink (-aZ,
 # RUNBOOK §5.5) récupère tout l'espace inutilisé à la fin — cette marge est donc
 # gratuite dans l'artefact distribué.
 EDITBASE_IMAGE_ENLARGEROOT=1500
