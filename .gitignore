@@ -1,0 +1,25 @@
+# Build artifacts
+bin/
+obj/
+
+# IDE
+.vs/
+*.csproj.user
+*.user
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Publish output
+publish/
+out/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Claude Code (état local, lock de tâches planifiées)
+.claude/

@@ -1,0 +1,93 @@
+name: Build SD image
+
+# Fabrique l'image SD distribuable (photobooth-dist.img.xz) de façon
+# reproductible, SANS Pi physique : dotnet publish -> CustoPiZer (chroot
+# QEMU/ARM) -> PiShrink. Voir image-builder/README.md et le RUNBOOK §10.
+#
+# ⚠️ La CI ne VALIDE PAS l'exécution (rendu DRM/GPU, GPIO, GoPro, endurance) :
+# l'émulation ne le permet pas. La Phase 4 du runbook reste à faire sur un Pi
+# réel, PAR MODÈLE (Pi 3 / Pi 4 / Pi 5) que l'on veut certifier.
+
+on:
+  workflow_dispatch:
+    inputs:
+      overlay:
+        description: "Overlay FS (root read-only). false = image dev/debug inscriptible."
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # création de Release sur tag
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish app (linux-arm64, self-contained, ReadyToRun)
+        run: |
+          dotnet publish src/Photobooth.App/Photobooth.App.csproj -c Release \
+            -r linux-arm64 --self-contained true -p:PublishReadyToRun=true \
+            -o publish
+
+      - name: Resolve overlay flag
+        id: flags
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.overlay }}" = "false" ]; then
+            echo "overlay=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "overlay=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download Raspberry Pi OS Lite (64-bit)
+        run: |
+          curl -fL -o rpios.img.xz https://downloads.raspberrypi.com/raspios_lite_arm64_latest
+          xz -dv rpios.img.xz
+          mv rpios.img image-builder/input.img
+
+      - name: Stage deploy/ + publish/ for CustoPiZer
+        run: |
+          rm -rf image-builder/scripts/files/deploy image-builder/scripts/files/publish
+          cp -r deploy  image-builder/scripts/files/deploy
+          cp -r publish image-builder/scripts/files/publish
+
+      - name: Set up QEMU (ARM emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Run CustoPiZer
+        run: |
+          docker run --rm --privileged \
+            -v /dev:/dev \
+            -v "${{ github.workspace }}/image-builder":/CustoPiZer/workspace \
+            -v "${{ github.workspace }}/image-builder/config.local":/CustoPiZer/config.local \
+            -e PHOTOBOOTH_OVERLAY=${{ steps.flags.outputs.overlay }} \
+            -e PI_PASSWORD="${{ secrets.PI_PASSWORD }}" \
+            ghcr.io/octoprint/custopizer:latest
+
+      - name: Shrink + compress (PiShrink -acZ)
+        run: |
+          curl -fL -o pishrink.sh https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
+          chmod +x pishrink.sh
+          sudo ./pishrink.sh -acZ image-builder/output.img photobooth-dist.img
+          ls -lh photobooth-dist.img.xz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: photobooth-dist-img
+          path: photobooth-dist.img.xz
+          retention-days: 30
+
+      - name: Attach to Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: photobooth-dist.img.xz

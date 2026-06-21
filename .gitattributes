@@ -1,0 +1,17 @@
+# Normalise les fins de ligne. Cible = Linux (Raspberry Pi) -> LF par défaut.
+* text=auto eol=lf
+
+# CRITIQUE : ces fichiers sont exécutés sur le Pi. En CRLF, le shebang #!/bin/bash
+# casse et update-initramfs / systemd refusent les scripts. On FORCE le LF.
+*.sh    text eol=lf
+*.service text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Binaires : pas de conversion de fins de ligne.
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.ico  binary
+*.img  binary
+*.xz   binary

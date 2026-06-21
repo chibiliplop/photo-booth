@@ -1,0 +1,16 @@
+# ============================================================
+#  Wi-Fi de la GoPro  —  a remplir par l'operateur
+#  Editez les 2 lignes ci-dessous, enregistrez, puis rebranchez
+#  la carte SD dans la borne. Ne renommez pas ce fichier.
+# ============================================================
+
+GOPRO_SSID=GP12345678
+GOPRO_PASSWORD=motdepasse-de-ma-gopro
+
+# ------------------------------------------------------------
+#  (Facultatif) Reseau Wi-Fi secondaire, ex. box de la maison
+#  pour faire des tests avec Internet. Enlevez le # du debut
+#  des 2 lignes pour l'activer. Laissez tel quel si inutile.
+# ------------------------------------------------------------
+#WIFI_SSID=
+#WIFI_PASSWORD=

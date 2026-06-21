@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Photobooth.Core\Photobooth.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- System.Device.Gpio also provides System.Device.I2c (no separate package needed). -->
+    <PackageReference Include="System.Device.Gpio" Version="3.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+</Project>

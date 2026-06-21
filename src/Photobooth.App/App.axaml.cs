@@ -1,0 +1,171 @@
+using System;
+using System.IO;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
+using Avalonia.Markup.Xaml;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using Photobooth.App.Composition;
+using Photobooth.App.ViewModels;
+using Photobooth.App.Views;
+using Photobooth.Core.Abstractions;
+using Photobooth.Core.Workflow;
+using Serilog;
+
+namespace Photobooth.App;
+
+public partial class App : Application
+{
+    private PhotoboothWorkflow? _workflow;
+
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        // ==========================================
+        // DESIGN TIME: Prevent previewer crashes
+        // ==========================================
+        if (Design.IsDesignMode)
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime designDesktop)
+            {
+                designDesktop.MainWindow = new MainWindow(); 
+            }
+            else if (ApplicationLifetime is ISingleViewApplicationLifetime designSingleView)
+            {
+                designSingleView.MainView = new MainView();
+            }
+            
+            base.OnFrameworkInitializationCompleted();
+            return; // Exit early! Do not run the DI or hardware logic below.
+        }
+
+        // ==========================================
+        // RUNTIME: Normal application execution
+        // ==========================================
+        var sp = Program.Services;
+        var vm = sp.GetRequiredService<MainViewModel>();
+        var workflow = sp.GetRequiredService<PhotoboothWorkflow>();
+        var hardware = sp.GetRequiredService<HardwareBundle>();
+        var buttons = hardware.Button;
+        _workflow = workflow;
+
+        Control? root = null;
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            var window = new MainWindow { DataContext = vm };
+            if (Program.Fullscreen)
+            {
+                window.WindowState = WindowState.FullScreen;
+                window.SystemDecorations = SystemDecorations.None;
+            }
+            window.KeyDown += (_, e) => OnKey(e, workflow);
+            desktop.MainWindow = window;
+            desktop.ShutdownRequested += (_, _) => ShutdownWorkflow();
+            root = window;
+        }
+        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        {
+            var view = new MainView { DataContext = vm };
+            view.KeyDown += (_, e) => OnKey(e, workflow);
+            singleView.MainView = view;
+            root = view;
+        }
+
+        // Critical startup problems the operator must see on the kiosk screen (their only output):
+        // an invalid edited config (photobooth.json), or GPIO that was expected but couldn't initialise.
+        var diagnostic = ServiceConfiguration.ValidateOptions(sp) ?? hardware.StartupWarning;
+
+        // Route hardware buttons (and keyboard) to the workflow's command channel.
+        buttons.PhotoPressed += () => workflow.Submit(new BoothCommand.PhotoRequested());
+        buttons.VideoPressed += () => workflow.Submit(new BoothCommand.VideoToggleRequested());
+        try
+        {
+            buttons.Start();
+        }
+        catch (Exception ex)
+        {
+            // Real GPIO can fail at Start() (callback registration) even after Create() succeeded — keep the
+            // booth alive on keyboard and tell the operator rather than crash.
+            Log.Error(ex, "Démarrage des boutons GPIO échoué ; le clavier reste utilisable.");
+            diagnostic ??= "Boutons GPIO inaccessibles : la borne fonctionne au clavier uniquement. " +
+                           "Vérifiez le câblage et les droits d'accès (groupes gpio/i2c).";
+        }
+        _ = workflow.StartAsync();
+
+        if (diagnostic is not null)
+        {
+            Log.Error("Diagnostic de démarrage affiché à l'écran : {Diagnostic}", diagnostic);
+            vm.ShowDiagnostic(diagnostic);
+        }
+
+        if (Program.ScreenshotPath is { } shot && root is not null)
+            ScheduleVerificationScreenshots(root, workflow, shot);
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void OnKey(KeyEventArgs e, PhotoboothWorkflow workflow)
+    {
+        switch (e.Key)
+        {
+            case Key.Space:
+            case Key.Enter:
+                workflow.Submit(new BoothCommand.PhotoRequested());
+                break;
+            case Key.V:
+                workflow.Submit(new BoothCommand.VideoToggleRequested());
+                break;
+        }
+    }
+
+    private void ShutdownWorkflow()
+    {
+        try { _workflow?.StopAsync().GetAwaiter().GetResult(); }
+        catch (Exception ex) { Log.Warning(ex, "Error stopping workflow on shutdown."); }
+    }
+
+    // Dev/CI only: trigger a capture, then snapshot the countdown and the displayed photo, then exit.
+    private void ScheduleVerificationScreenshots(Control root, PhotoboothWorkflow workflow, string path)
+    {
+        DispatcherTimer.RunOnce(() => workflow.Submit(new BoothCommand.PhotoRequested()), TimeSpan.FromSeconds(0.5));
+        DispatcherTimer.RunOnce(() => Capture(root, Suffix(path, "-countdown")), TimeSpan.FromSeconds(2.5));
+        DispatcherTimer.RunOnce(() =>
+        {
+            Capture(root, path);
+            (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }, TimeSpan.FromSeconds(8.0));
+    }
+
+    private static void Capture(Control root, string path)
+    {
+        try
+        {
+            var w = Math.Max(1, (int)root.Bounds.Width);
+            var h = Math.Max(1, (int)root.Bounds.Height);
+            using var rtb = new RenderTargetBitmap(new PixelSize(w, h), new Vector(96, 96));
+            rtb.Render(root);
+            var full = Path.GetFullPath(path);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            using (var fs = File.Create(full))
+                rtb.Save(fs);
+            Log.Information("Screenshot saved: {Path} ({W}x{H}).", full, w, h);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Screenshot capture failed.");
+        }
+    }
+
+    private static string Suffix(string path, string suffix)
+    {
+        var dir = Path.GetDirectoryName(path) ?? ".";
+        var name = Path.GetFileNameWithoutExtension(path);
+        var ext = Path.GetExtension(path);
+        return Path.Combine(dir, name + suffix + ext);
+    }
+}

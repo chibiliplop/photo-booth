@@ -1,0 +1,34 @@
+# /etc/systemd/system/photobooth-provision.service
+#
+# Provisionne le Wi-Fi (GoPro + réseau secondaire) à chaque démarrage,
+# AVANT le lancement de l'application Photobooth.
+#
+# Activation (une fois, par le mainteneur) :
+#     sudo cp deploy/photobooth-provision.sh /usr/local/sbin/photobooth-provision.sh
+#     sudo chmod 755 /usr/local/sbin/photobooth-provision.sh
+#     sudo cp deploy/systemd/photobooth-provision.service /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable photobooth-provision.service
+#
+# Logs : journalctl -u photobooth-provision
+
+[Unit]
+Description=Photobooth - provisionnement Wi-Fi (GoPro + réseau secondaire)
+# NetworkManager doit être actif pour que nmcli réponde.
+After=NetworkManager.service
+Wants=NetworkManager.service
+# Doit s'exécuter AVANT l'app (qui parle à la GoPro).
+Before=photobooth.service
+# On NE dépend PAS de network-online.target : sur site il n'y a pas d'Internet,
+# et la GoPro peut être allumée après le Pi. autoconnect-retries=0 gère la suite.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/photobooth-provision.sh
+# nmcli/NetworkManager exigent root.
+User=root
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

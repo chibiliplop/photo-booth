@@ -1,0 +1,57 @@
+{
+  // =====================================================================
+  //  PHOTOBOOTH - Configuration de l'evenement
+  //  Modifiez UNIQUEMENT le texte entre guillemets, puis enregistrez et
+  //  rebranchez la carte SD dans la borne. Ne renommez pas ce fichier.
+  //  Ne mettez pas de virgule apres la derniere valeur d'un bloc.
+  // =====================================================================
+
+  "Theme": {
+    // Noms affiches sur l'ecran d'accueil (ex: les maries).
+    "Names": "Camille & Yann",
+
+    // Annee de l'evenement.
+    "Year": "2026",
+
+    // Image de fond : deposez votre image a cote de ce fichier sous le nom
+    // exact "fond.jpg" et ne touchez pas a la ligne ci-dessous.
+    // Laissez la valeur vide ("") pour garder le fond par defaut de la borne.
+    "BackgroundImage": "/boot/firmware/photobooth/fond.jpg",
+
+    // Resolution de l'ecran, au format LARGEURxHAUTEUR (ex: "1920x1080").
+    // L'interface s'adapte automatiquement a la taille de l'ecran : pour un
+    // ecran 16:9 (la plupart des televiseurs/moniteurs) la valeur par defaut
+    // convient et il est inutile d'y toucher. Modifiez-la uniquement si votre
+    // ecran a un autre format (ex: 4:3) pour limiter les bandes noires.
+    "ScreenResolution": "1280x720"
+  },
+
+  "Gopro": {
+    // "http" = vraie GoPro pilotee en Wi-Fi (le jour J).
+    // "fake" = MODE DEMO sans GoPro (fausses photos, pour tester a la maison).
+    //          Repassez sur "http" avant le vrai evenement.
+    "Mode": "http"
+  },
+
+  // =====================================================================
+  //  MATERIEL (AVANCE) - a ne modifier QUE si vous fabriquez vous-meme
+  //  la borne et que votre cablage differe des valeurs par defaut.
+  //  Si vous avez une borne deja montee : NE TOUCHEZ A RIEN ICI.
+  //  Numeros de broches au format BCM (de 0 a 27), comme sur le
+  //  schema de branchement.
+  // =====================================================================
+  "Hardware": {
+    // Broche du bouton PHOTO (defaut 18).
+    "PhotoButtonPin": 18,
+
+    // Broche du bouton VIDEO (defaut 20).
+    "VideoButtonPin": 20,
+
+    // Lumiere : mettez false si votre borne n'a PAS de lumiere.
+    // Dans ce cas la borne fonctionne normalement, sans lumiere.
+    "LightEnabled": true,
+
+    // Broche de la sortie LUMIERE (defaut 17). Ignoree si LightEnabled = false.
+    "LightPin": 17
+  }
+}

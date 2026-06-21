@@ -1,0 +1,10 @@
+# Artefacts de build — jamais versionnés (régénérés par build-local.sh / la CI).
+input.img
+output.img
+*.img
+*.img.xz
+pishrink.sh
+
+# Staging peuplé au build depuis deploy/ et publish/ (source de vérité = deploy/).
+scripts/files/deploy/
+scripts/files/publish/

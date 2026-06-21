@@ -1,0 +1,33 @@
+===============================================================
+  BORNE PHOTO  -  fichiers a personnaliser pour votre evenement
+===============================================================
+
+Vous etes au bon endroit ! Ce dossier contient les 3 reglages de
+la borne. Modifiez-les sur votre ordinateur, puis remettez la
+carte SD dans la borne. Aucune autre manipulation n'est necessaire.
+
+  1) photobooth.json . . . les NOMS, l'ANNEE et le fond d'ecran
+  2) fond.jpg  . . . . . . l'IMAGE de fond (remplacez ce fichier)
+  3) wifi.txt  . . . . . . le Wi-Fi de VOTRE GoPro (nom + mot de passe)
+
+REGLES SIMPLES
+  - MODIFIEZ les fichiers existants ; n'en CREEZ pas, ne les RENOMMEZ pas.
+  - Pour le fond : votre image doit s'appeler exactement "fond.jpg".
+  - Dans photobooth.json, ne changez que le texte entre guillemets.
+
+POUR TESTER SANS LA GOPRO (la veille, a la maison)
+  - Dans photobooth.json, mettez   "Mode": "fake"   (au lieu de "http").
+  - La borne fera de fausses photos pour verifier ecran + boutons.
+  - IMPORTANT : remettez   "Mode": "http"   avant le vrai evenement.
+
+VOUS FABRIQUEZ VOUS-MEME LA BORNE ? (avance, sinon ignorez)
+  - En bas de photobooth.json, le bloc "Hardware" permet de choisir
+    les broches GPIO des boutons et de la lumiere.
+  - Si votre borne n'a PAS de lumiere : mettez   "LightEnabled": false
+    La borne fonctionne alors normalement, sans lumiere.
+  - Bornes deja montees / fournies : NE TOUCHEZ A RIEN dans ce bloc.
+
+Le guide complet (branchements, depannage) est fourni a part :
+"Borne photo - guide de l'operateur".
+
+Bon evenement !

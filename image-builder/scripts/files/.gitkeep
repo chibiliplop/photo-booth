@@ -1,0 +1,8 @@
+# Ce dossier est monté sur /files dans le chroot CustoPiZer.
+#
+# Il est PEUPLÉ AU BUILD (par la CI ou par build-local.sh), PAS versionné :
+#   scripts/files/deploy/   <- copie de ../../deploy/   (units, provisioning, modèles)
+#   scripts/files/publish/  <- sortie de `dotnet publish -r linux-arm64 --self-contained`
+#
+# Source de vérité unique = le dossier deploy/ du dépôt. On ne duplique rien :
+# on le copie ici juste le temps du build. Voir image-builder/README.md.

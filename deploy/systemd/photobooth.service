@@ -1,0 +1,50 @@
+# /etc/systemd/system/photobooth.service
+#
+# Service kiosk de la borne photo. Démarre seul, plein écran, sur tty1,
+# et se relance automatiquement en cas de crash (principal levier de stabilité).
+#
+# Activation (une fois, par le mainteneur) :
+#     sudo cp deploy/systemd/photobooth.service /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable photobooth.service
+#     # libérer tty1 (sinon un curseur de login apparaît derrière le kiosk) :
+#     sudo systemctl set-default multi-user.target
+#     sudo systemctl disable getty@tty1.service
+#     sudo systemctl mask getty@tty1.service
+#
+# Logs : journalctl -u photobooth -f
+
+[Unit]
+Description=Photobooth kiosk
+After=multi-user.target photobooth-provision.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=pi
+SupplementaryGroups=gpio i2c video input render
+WorkingDirectory=/home/pi/photobooth
+ExecStart=/home/pi/photobooth/Photobooth.App --drm
+
+# --- Rendu logiciel (IMPORTANT, voir RUNBOOK §rendu) ---------------------
+# En Avalonia 11, StartLinuxDrm (--drm) est TOUJOURS accéléré matériellement :
+# il passe par le GPU VC4 du Pi 3, source documentée de plantages EGL / écran noir.
+# La variable AVALONIA_RENDERER=software N'EXISTE PLUS en Avalonia 11 (no-op) :
+# on force donc le GL logiciel au niveau Mesa (llvmpipe), indépendant d'Avalonia.
+# À VALIDER sur le vrai Pi 3 ; si instable, replier sur le backend FBDev (StartLinuxFbDev),
+# toujours logiciel. Voir RUNBOOK.
+Environment=LIBGL_ALWAYS_SOFTWARE=1
+Environment=GALLIUM_DRIVER=llvmpipe
+
+# Plafonne le tas .NET (~384 Mo) pour ne pas faire swapper le Pi (1 Go).
+Environment=DOTNET_GCHeapHardLimit=0x18000000
+
+Restart=always
+RestartSec=3
+StandardInput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVTDisallocate=yes
+
+[Install]
+WantedBy=multi-user.target
