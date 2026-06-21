@@ -124,15 +124,14 @@ scp -r publish pi@raspberrypi:/home/pi/photobooth
 ssh pi@raspberrypi 'chmod +x /home/pi/photobooth/Photobooth.App'
 ```
 
-### Lancer en kiosk DRM (plein écran, sans bureau)
+### Lancer en kiosk FBDev (plein écran, sans bureau)
 ```bash
-sudo /home/pi/photobooth/Photobooth.App --drm
+sudo /home/pi/photobooth/Photobooth.App --fbdev
 ```
-Si vous voyez `DRI2: failed to authenticate`, un écran noir, ou des saccades GPU : c'est le GPU VC4 du Pi 3. ⚠️ **`AVALONIA_RENDERER=software` n'existe PLUS en Avalonia 11** (vestige 0.10, ignoré) et `--drm`/`StartLinuxDrm` est *toujours* accéléré matériellement. Forcer le **rendu logiciel au niveau Mesa** (llvmpipe) :
+`--fbdev` est le backend logiciel recommandé pour l'image turnkey sur Pi 3. Si vous voulez comparer avec DRM, gardez en tête que `--drm`/`StartLinuxDrm` est *toujours* accéléré matériellement en Avalonia 11 et peut donner un écran noir avec le GPU VC4. Dans ce cas seulement, testez :
 ```bash
 LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe /home/pi/photobooth/Photobooth.App --drm
 ```
-Si même cela reste instable, replier sur le backend **FBDev** (toujours logiciel) : remplacer `builder.StartLinuxDrm(args, null, 1.0)` par `builder.StartLinuxFbDev(args)` dans `Program.cs`. Voir `RUNBOOK_MAINTENEUR_CARTE_SD.md` (section « Rendu »).
 
 ### Test rapide en fenêtre (si vous gardez le bureau)
 ```bash
@@ -154,7 +153,7 @@ Type=simple
 User=pi
 SupplementaryGroups=gpio i2c video input render
 WorkingDirectory=/home/pi/photobooth
-ExecStart=/home/pi/photobooth/Photobooth.App --drm
+ExecStart=/home/pi/photobooth/Photobooth.App --fbdev
 Environment=LIBGL_ALWAYS_SOFTWARE=1
 Environment=GALLIUM_DRIVER=llvmpipe
 Environment=DOTNET_GCHeapHardLimit=0x18000000

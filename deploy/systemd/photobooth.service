@@ -18,21 +18,21 @@
 Description=Photobooth kiosk
 After=multi-user.target photobooth-provision.service
 Conflicts=getty@tty1.service
+ConditionPathExists=!/boot/firmware/photobooth/disable-kiosk
 
 [Service]
 Type=simple
 User=pi
 SupplementaryGroups=gpio i2c video input render
 WorkingDirectory=/home/pi/photobooth
-ExecStart=/home/pi/photobooth/Photobooth.App --drm
+ExecStart=/home/pi/photobooth/Photobooth.App --fbdev
 
 # --- Rendu logiciel (IMPORTANT, voir RUNBOOK §rendu) ---------------------
 # En Avalonia 11, StartLinuxDrm (--drm) est TOUJOURS accéléré matériellement :
 # il passe par le GPU VC4 du Pi 3, source documentée de plantages EGL / écran noir.
 # La variable AVALONIA_RENDERER=software N'EXISTE PLUS en Avalonia 11 (no-op) :
-# on force donc le GL logiciel au niveau Mesa (llvmpipe), indépendant d'Avalonia.
-# À VALIDER sur le vrai Pi 3 ; si instable, replier sur le backend FBDev (StartLinuxFbDev),
-# toujours logiciel. Voir RUNBOOK.
+# l'image turnkey utilise donc FBDev (--fbdev), backend logiciel plus prévisible
+# sur Pi 3. Les variables Mesa restent inoffensives si le backend les ignore.
 Environment=LIBGL_ALWAYS_SOFTWARE=1
 Environment=GALLIUM_DRIVER=llvmpipe
 

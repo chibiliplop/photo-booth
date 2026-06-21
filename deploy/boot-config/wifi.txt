@@ -7,6 +7,10 @@
 GOPRO_SSID=GP12345678
 GOPRO_PASSWORD=motdepasse-de-ma-gopro
 
+# Pays Wi-Fi (obligatoire pour debloquer la radio sur Raspberry Pi OS).
+# FR = France. Exemples : BE, CH, CA, US.
+WIFI_COUNTRY=FR
+
 # ------------------------------------------------------------
 #  (Facultatif) Reseau Wi-Fi secondaire, ex. box de la maison
 #  pour faire des tests avec Internet. Enlevez le # du debut

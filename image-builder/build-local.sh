@@ -7,6 +7,8 @@
 # Usage :
 #   ./build-local.sh                      # image « dist » (overlay ON)
 #   PHOTOBOOTH_OVERLAY=0 ./build-local.sh # image « dev » (root inscriptible)
+#   PHOTOBOOTH_OVERLAY=0 PHOTOBOOTH_KIOSK=0 ./build-local.sh
+#                                        # image debug Linux (console + SSH/Wi-Fi, sans app)
 #   PI_PASSWORD=secret ./build-local.sh
 #
 # Prérequis : dotnet SDK 8, docker, xz, curl, sudo (pour PiShrink).
@@ -15,6 +17,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 PHOTOBOOTH_OVERLAY="${PHOTOBOOTH_OVERLAY:-1}"
+PHOTOBOOTH_KIOSK="${PHOTOBOOTH_KIOSK:-1}"
 PI_PASSWORD="${PI_PASSWORD:-raspberry}"
 IMG_XZ="$HERE/rpios-lite-arm64.img.xz"
 
@@ -36,12 +39,13 @@ rm -rf "$HERE/scripts/files/deploy" "$HERE/scripts/files/publish"
 cp -r "$ROOT/deploy"  "$HERE/scripts/files/deploy"
 cp -r "$ROOT/publish" "$HERE/scripts/files/publish"
 
-echo "==> 4/5  CustoPiZer (chroot QEMU/ARM) — overlay=$PHOTOBOOTH_OVERLAY"
+echo "==> 4/5  CustoPiZer (chroot QEMU/ARM) — overlay=$PHOTOBOOTH_OVERLAY kiosk=$PHOTOBOOTH_KIOSK"
 docker run --rm --privileged \
     -v /dev:/dev \
     -v "$HERE":/CustoPiZer/workspace \
     -v "$HERE/config.local":/CustoPiZer/config.local \
     -e PHOTOBOOTH_OVERLAY="$PHOTOBOOTH_OVERLAY" \
+    -e PHOTOBOOTH_KIOSK="$PHOTOBOOTH_KIOSK" \
     -e PI_PASSWORD="$PI_PASSWORD" \
     ghcr.io/octoprint/custopizer:latest
 

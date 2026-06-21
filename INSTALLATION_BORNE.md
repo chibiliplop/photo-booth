@@ -81,6 +81,7 @@ Les broches sont **configurables** sans recompiler : tout est dans le bloc
 
 ```jsonc
 "Hardware": {
+  "Mode": "auto",        // auto = GPIO reels sur Pi ; fake = clavier/sans GPIO
   "PhotoButtonPin": 18,   // broche BCM du bouton photo
   "VideoButtonPin": 20,   // broche BCM du bouton vidéo
   "LightEnabled": true,   // false = borne SANS lumière (la broche n'est jamais ouverte)
@@ -90,6 +91,8 @@ Les broches sont **configurables** sans recompiler : tout est dans le bloc
 
 - Valeurs BCM **0 à 27**, **sans doublon**. Une valeur invalide n'empêche **pas**
   le démarrage : la borne affiche un **bandeau rouge** à l'écran (pas de crash).
+- `Mode: "auto"` → comportement normal : les GPIO réels sont utilisés sur Raspberry Pi.
+  `Mode: "fake"` → aucun GPIO n'est ouvert ; utile pour tester l'interface au clavier.
 - `LightEnabled: false` → borne **sans lumière** : tout fonctionne normalement, la
   broche lumière n'est jamais utilisée.
 - Ce bloc est marqué *avancé* dans le fichier : l'**opérateur** d'événement n'y
@@ -201,6 +204,7 @@ après le `=` :
 ```
 GOPRO_SSID=GP12345678
 GOPRO_PASSWORD=le-mot-de-passe-de-ma-gopro
+WIFI_COUNTRY=FR
 ```
 
 Au **premier démarrage**, le service de provisioning lit ce fichier et crée tout

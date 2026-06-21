@@ -20,6 +20,7 @@ namespace Photobooth.App.ViewModels;
 public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
 {
     private const int DisplayDecodeWidth = 800;
+    private const string DefaultBackground = "avares://Photobooth.App/Assets/background.jpg";
 
     // Operator status colours (banner background + connectivity dot).
     private static readonly IBrush ReadyBrush   = new SolidColorBrush(Color.FromRgb(0x2E, 0xCC, 0x71)); // vert
@@ -172,7 +173,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         Year = t.Year;
         DesignWidth = t.DesignWidth;
         DesignHeight = t.DesignHeight;
-        Background = LoadBitmap(t.BackgroundImage);
+        Background = LoadBitmap(t.BackgroundImage) ?? LoadBitmap(DefaultBackground);
         ArrowLeft = LoadBitmap("avares://Photobooth.App/Assets/arrow1.png");
         ArrowMiddle = LoadBitmap("avares://Photobooth.App/Assets/arrow2.png");
         ArrowRight = LoadBitmap("avares://Photobooth.App/Assets/arrow3.png");
@@ -319,6 +320,8 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
             if (path.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
                 return new Bitmap(AssetLoader.Open(new Uri(path)));
             if (File.Exists(path))

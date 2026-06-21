@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Avalonia;
+using Avalonia.LinuxFramebuffer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Photobooth.App.Composition;
@@ -19,7 +20,7 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        Fullscreen = args.Contains("--fullscreen") || args.Contains("--drm");
+        Fullscreen = args.Contains("--fullscreen") || args.Contains("--drm") || args.Contains("--fbdev");
         ScreenshotPath = ParseValue(args, "--screenshot");
         ScreenshotVideoPath = ParseValue(args, "--screenshot-video");
 
@@ -67,12 +68,17 @@ internal static class Program
             }
 
             var builder = BuildAvaloniaApp();
-            return args.Contains("--drm")
+            if (args.Contains("--fbdev"))
+                // Kiosk Pi 3 robuste : FBDev est logiciel et évite les écrans noirs DRM/VC4.
+                return builder.StartLinuxFbDev(args);
+
+            if (args.Contains("--drm"))
                 // Kiosk Pi. DRM en Avalonia 11 = TOUJOURS accéléré (GPU VC4) : forcer le GL
                 // logiciel via Mesa (LIBGL_ALWAYS_SOFTWARE=1, GALLIUM_DRIVER=llvmpipe), ou
-                // basculer en StartLinuxFbDev(args) (toujours logiciel). Voir RUNBOOK.
-                ? builder.StartLinuxDrm(args, null, 1.0)
-                : builder.StartWithClassicDesktopLifetime(args);
+                // préférer --fbdev si le Pi affiche un écran noir.
+                return builder.StartLinuxDrm(args, null, 1.0);
+
+            return builder.StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
         {

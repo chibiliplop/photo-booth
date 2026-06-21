@@ -27,6 +27,8 @@
 # Variables d'environnement (passées via `docker run -e ...`) :
 #   PHOTOBOOTH_OVERLAY  1|true|yes (défaut) = active l'overlay read-only (image « dist »)
 #                       0|false|no          = laisse le root inscriptible (image « dev »)
+#   PHOTOBOOTH_KIOSK    1|true|yes (défaut) = lance l'app sur tty1
+#                       0|false|no          = debug Linux : console tty1, pas de kiosk
 #   PI_PASSWORD         mot de passe du compte pi (défaut: raspberry — À CHANGER)
 #   PI_SSH              1|true (défaut) = active SSH ; 0 = désactive
 # =============================================================================
@@ -47,6 +49,10 @@ PI_PASSWORD="${PI_PASSWORD:-raspberry}"
 case "${PHOTOBOOTH_OVERLAY:-1}" in
     1|true|yes|on|TRUE|Yes|On) WANT_OVERLAY=1 ;;
     *)                         WANT_OVERLAY=0 ;;
+esac
+case "${PHOTOBOOTH_KIOSK:-1}" in
+    1|true|yes|on|TRUE|Yes|On) WANT_KIOSK=1 ;;
+    *)                         WANT_KIOSK=0 ;;
 esac
 case "${PI_SSH:-1}" in
     1|true|yes|on|TRUE|Yes|On) WANT_SSH=1 ;;
@@ -82,6 +88,7 @@ if ! id -u pi >/dev/null 2>&1; then
     useradd -m -d /home/pi -s /bin/bash pi
 fi
 echo "pi:${PI_PASSWORD}" | chpasswd
+usermod -s /bin/bash pi
 # Ce mot de passe n'est qu'un DÉFAUT : chaque carte peut le surcharger via
 # /boot/firmware/photobooth/admin.txt (réappliqué à chaque boot, persiste sous
 # overlay). Inutile donc d'en faire un secret CI.
@@ -107,7 +114,9 @@ apt-get update
 #                  le loader GLVND 'libegl1' + l'implémentation Mesa 'libegl-mesa0'.
 # Un paquet introuvable fait sortir apt en code 100 et casse tout le build.
 apt-get install -y --no-install-recommends \
+    openssh-server \
     gpiod libgpiod3 \
+    rfkill iw \
     i2c-tools \
     libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig
 
@@ -115,6 +124,11 @@ apt-get install -y --no-install-recommends \
 for grp in gpio render i2c; do
     getent group "$grp" >/dev/null 2>&1 && usermod -aG "$grp" pi || true
 done
+
+# Débloque le Wi-Fi Raspberry Pi OS au premier boot. Le provisioning relira
+# ensuite WIFI_COUNTRY depuis /boot/firmware/photobooth/wifi.txt.
+raspi-config nonint do_wifi_country FR >/dev/null 2>&1 || warn "Pays Wi-Fi FR non appliqué dans le chroot."
+iw reg set FR >/dev/null 2>&1 || true
 
 # -----------------------------------------------------------------------------
 # PHASE 2 — Dépose du binaire .NET self-contained
@@ -134,6 +148,8 @@ install -m 0755 /files/deploy/photobooth-provision.sh /usr/local/sbin/photobooth
 # Sécurité fins de ligne : le shebang casse en CRLF. On force LF.
 sed -i 's/\r$//' /usr/local/sbin/photobooth-provision.sh
 install -m 0644 /files/deploy/systemd/photobooth-provision.service /etc/systemd/system/
+install -m 0644 /files/deploy/systemd/photobooth-ssh-hostkeys.service /etc/systemd/system/
+install -m 0644 /files/deploy/systemd/photobooth-user-access.service /etc/systemd/system/
 
 # -----------------------------------------------------------------------------
 # 3.3 — Service kiosk durci
@@ -154,15 +170,27 @@ enable_unit() {
     fi
 }
 mkdir -p /etc/systemd/system/multi-user.target.wants
+enable_unit photobooth-user-access.service
 enable_unit photobooth-provision.service
-enable_unit photobooth.service
+if [ "$WANT_KIOSK" = "1" ]; then
+    enable_unit photobooth.service
+else
+    systemctl disable photobooth.service >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/multi-user.target.wants/photobooth.service || true
+    say "Kiosk désactivé (PHOTOBOOTH_KIOSK=0) : debug Linux sur tty1."
+fi
 
-# Libère tty1 : multi-user par défaut, getty@tty1 désactivé + masqué.
+# Mode kiosk : libère tty1. Mode debug : garde le login local sur tty1.
 systemctl set-default multi-user.target >/dev/null 2>&1 || \
     ln -sf /lib/systemd/system/multi-user.target /etc/systemd/system/default.target
-systemctl disable getty@tty1.service >/dev/null 2>&1 || true
-systemctl mask    getty@tty1.service >/dev/null 2>&1 || \
-    ln -sf /dev/null /etc/systemd/system/getty@tty1.service
+if [ "$WANT_KIOSK" = "1" ]; then
+    systemctl disable getty@tty1.service >/dev/null 2>&1 || true
+    systemctl mask    getty@tty1.service >/dev/null 2>&1 || \
+        ln -sf /dev/null /etc/systemd/system/getty@tty1.service
+else
+    systemctl unmask getty@tty1.service >/dev/null 2>&1 || true
+    systemctl enable getty@tty1.service >/dev/null 2>&1 || true
+fi
 
 # Neutralise l'ASSISTANT DE PREMIÈRE CONFIGURATION de Raspberry Pi OS (Bookworm/
 # Trixie). Sinon le 1er boot ouvre un wizard interactif sur tty1 qui réclame la
@@ -190,6 +218,19 @@ say "userconfig.service masqué."
 
 # Activation SSH (maintenance). RPi OS régénère les clés d'hôte au 1er boot.
 if [ "$WANT_SSH" = "1" ]; then
+    # Certaines images CustoPiZer/overlay arrivent au 1er boot sans clés d'hôte
+    # encore présentes, ce qui fait échouer ssh.service. ssh-keygen -A est
+    # idempotent : il ne remplace pas des clés existantes.
+    mkdir -p /etc/systemd/system/ssh.service.d
+    cat > /etc/systemd/system/ssh.service.d/photobooth-hostkeys.conf <<'EOF'
+[Unit]
+Wants=photobooth-user-access.service photobooth-ssh-hostkeys.service
+After=photobooth-user-access.service photobooth-ssh-hostkeys.service
+
+[Service]
+ExecStartPre=/usr/bin/ssh-keygen -A
+EOF
+    enable_unit photobooth-ssh-hostkeys.service
     systemctl enable ssh >/dev/null 2>&1 || systemctl enable sshd >/dev/null 2>&1 || \
         warn "Activation SSH non confirmée."
     say "SSH activé."
@@ -240,9 +281,13 @@ apt-get -y purge dphys-swapfile >/dev/null 2>&1 || true
 # Boot silencieux : append idempotent sur la ligne unique de cmdline.txt.
 CMDLINE="$BOOT_DIR/cmdline.txt"
 if [ -f "$CMDLINE" ]; then
-    for opt in quiet splash loglevel=3 logo.nologo vt.global_cursor_default=0; do
-        grep -qw -- "$opt" "$CMDLINE" || sed -i "1 s|\$| $opt|" "$CMDLINE"
-    done
+    if [ "$WANT_KIOSK" = "1" ]; then
+        for opt in quiet splash loglevel=3 logo.nologo vt.global_cursor_default=0; do
+            grep -qw -- "$opt" "$CMDLINE" || sed -i "1 s|\$| $opt|" "$CMDLINE"
+        done
+    else
+        sed -i 's/ quiet//g; s/ splash//g; s/ loglevel=3//g; s/ logo\.nologo//g; s/ vt\.global_cursor_default=0//g; s/  */ /g; s/^ //; s/ $//' "$CMDLINE"
+    fi
 fi
 
 # config.txt : append idempotent.

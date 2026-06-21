@@ -13,6 +13,7 @@
 # Format attendu de wifi.txt (clé=valeur, # = commentaire) :
 #     GOPRO_SSID=GP12345678
 #     GOPRO_PASSWORD=motdepasse-de-ma-gopro
+#     WIFI_COUNTRY=FR
 #     # Réseau secondaire facultatif (ex. box maison pour les tests) :
 #     #WIFI_SSID=Livebox-1234
 #     #WIFI_PASSWORD=cleboxsecrete
@@ -33,6 +34,7 @@ readonly CONN_GOPRO="photobooth-gopro"
 readonly CONN_WIFI2="photobooth-wifi2"
 readonly CONN_IMAGER="preconfigured"   # profil éventuellement injecté par Raspberry Pi Imager
 readonly ADMIN_CONF="/boot/firmware/photobooth/admin.txt"   # mot de passe SSH 'pi' (optionnel)
+readonly DEFAULT_WIFI_COUNTRY="FR"
 readonly PRIO_GOPRO=100   # la GoPro doit toujours gagner
 readonly PRIO_WIFI2=10
 
@@ -114,6 +116,7 @@ purge_imager_profile() {
 # la FAT32 (hors overlay) à chaque démarrage est le SEUL moyen que le changement
 # persiste. Défaut (admin.txt absent/commenté) = mot de passe figé à la fabrication.
 apply_admin_password() {
+    usermod -s /bin/bash pi 2>/dev/null || true
     [[ -f "$ADMIN_CONF" ]] || return 0
     local line rk pw=""
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -131,6 +134,25 @@ apply_admin_password() {
     fi
 }
 
+apply_wifi_country() {
+    local country="$1"
+    country="$(clean "$country")"
+    [[ -z "$country" ]] && country="$DEFAULT_WIFI_COUNTRY"
+    country="${country^^}"
+    if [[ ! "$country" =~ ^[A-Z]{2}$ ]]; then
+        warn "WIFI_COUNTRY='$country' invalide, utilisation de $DEFAULT_WIFI_COUNTRY."
+        country="$DEFAULT_WIFI_COUNTRY"
+    fi
+
+    log "Configuration du pays Wi-Fi: $country."
+    raspi-config nonint do_wifi_country "$country" >/dev/null 2>&1 \
+        || warn "raspi-config n'a pas pu appliquer le pays Wi-Fi '$country'."
+    iw reg set "$country" >/dev/null 2>&1 \
+        || warn "iw reg set '$country' a échoué."
+    rfkill unblock wifi >/dev/null 2>&1 \
+        || warn "rfkill unblock wifi a échoué."
+}
+
 main() {
     # Indépendant de wifi.txt -> toujours, AVANT la garde (s'applique même sans Wi-Fi).
     purge_imager_profile
@@ -143,7 +165,10 @@ main() {
     fi
     log "Lecture de la configuration depuis $CONF"
 
-    local gopro_ssid gopro_psk wifi2_ssid wifi2_psk
+    local wifi_country gopro_ssid gopro_psk wifi2_ssid wifi2_psk
+    wifi_country="$(read_key WIFI_COUNTRY)"
+    apply_wifi_country "$wifi_country"
+
     gopro_ssid="$(read_key GOPRO_SSID)"
     gopro_psk="$(read_key GOPRO_PASSWORD)"
     wifi2_ssid="$(read_key WIFI_SSID)"

@@ -150,12 +150,12 @@ scp -r publish pi@photobooth:/home/pi/photobooth
 ssh pi@photobooth "chmod +x /home/pi/photobooth/Photobooth.App"
 ```
 
-Test manuel en kiosk DRM. **Voir d'abord la section « Rendu » ci-dessous** : en Avalonia 11, `--drm` est *toujours* accéléré matériellement (GPU VC4), donc on force le GL logiciel au niveau Mesa.
+Test manuel en kiosk FBDev. **Voir d'abord la section « Rendu » ci-dessous** : sur Pi 3, FBDev est le backend logiciel le plus prévisible.
 
 ```bash
-# 1) Tester d'abord tel quel (le driver moderne vc4-kms-v3d marche souvent) :
-/home/pi/photobooth/Photobooth.App --drm
-# 2) Si écran noir / saccades / plantage EGL -> forcer le GL logiciel (llvmpipe) :
+# Chemin recommandé image turnkey :
+/home/pi/photobooth/Photobooth.App --fbdev
+# Comparaison DRM uniquement si besoin :
 LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe /home/pi/photobooth/Photobooth.App --drm
 ```
 
@@ -165,10 +165,7 @@ La borne doit s'afficher plein écran, FPS correct, RAM stable (`free -m`, pas d
 
 - `AVALONIA_RENDERER=software` était une variable d'**Avalonia 0.10** : elle est **ignorée en Avalonia 11** (no-op). Ne pas s'y fier.
 - D'après les mainteneurs Avalonia, le backend **DRM (`StartLinuxDrm` / `--drm`) est *toujours* accéléré matériellement** ; le backend **FBDev est *toujours* logiciel**.
-- **Donc le `--drm` actuel passe par le GPU VC4** — la source documentée d'écran noir/EGL. Trois options par coût croissant :
-  1. **Tester `--drm` tel quel** (souvent OK avec `vc4-kms-v3d`).
-  2. Si instable → **garder DRM mais forcer le GL logiciel** : `LIBGL_ALWAYS_SOFTWARE=1` + `GALLIUM_DRIVER=llvmpipe` (zéro modif code ; c'est ce que met le service en §3.3).
-  3. Si toujours instable → **passer en FBDev** : remplacer `builder.StartLinuxDrm(args, null, 1.0)` par `builder.StartLinuxFbDev(args)` dans `Program.cs` (rendu logiciel garanti, backend plus ancien).
+- **Donc le service turnkey lance `--fbdev` par défaut**. `--drm` reste disponible pour comparaison, mais ne doit pas être le défaut tant que le Pi 3 affiche un écran noir/EGL.
 
 ---
 
@@ -189,6 +186,7 @@ sudo mkdir -p /boot/firmware/photobooth
 # Reseau Wi-Fi de la GoPro. Editer puis rebrancher la borne.
 GOPRO_SSID=GP12345678
 GOPRO_PASSWORD=motdepasse-de-ma-gopro
+WIFI_COUNTRY=FR
 ```
 
 > **Clés exactes** : `GOPRO_SSID` / `GOPRO_PASSWORD` (c'est ce que lit `photobooth-provision.sh`). Le modèle complet, avec réseau secondaire optionnel, est dans `deploy/boot-config/wifi.txt`.
@@ -248,8 +246,8 @@ Type=simple
 User=pi
 SupplementaryGroups=gpio i2c video input render
 WorkingDirectory=/home/pi/photobooth
-ExecStart=/home/pi/photobooth/Photobooth.App --drm
-# Rendu logiciel forcé au niveau Mesa (voir section « Rendu » en §2).
+ExecStart=/home/pi/photobooth/Photobooth.App --fbdev
+# Backend logiciel par défaut sur Pi 3 (voir section « Rendu » en §2).
 # NE PAS utiliser AVALONIA_RENDERER=software : no-op en Avalonia 11.
 Environment=LIBGL_ALWAYS_SOFTWARE=1
 Environment=GALLIUM_DRIVER=llvmpipe

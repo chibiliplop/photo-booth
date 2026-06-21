@@ -1,0 +1,11 @@
+[Unit]
+Description=Photobooth - ensure SSH host keys exist
+DefaultDependencies=no
+Before=ssh.service sshd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ssh-keygen -A
+
+[Install]
+WantedBy=multi-user.target

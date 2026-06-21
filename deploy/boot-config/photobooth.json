@@ -13,10 +13,11 @@
     // Annee de l'evenement.
     "Year": "2026",
 
-    // Image de fond : deposez votre image a cote de ce fichier sous le nom
-    // exact "fond.jpg" et ne touchez pas a la ligne ci-dessous.
-    // Laissez la valeur vide ("") pour garder le fond par defaut de la borne.
-    "BackgroundImage": "/boot/firmware/photobooth/fond.jpg",
+    // Image de fond : laissez vide ("") pour garder le fond par defaut.
+    // Pour utiliser votre image, deposez-la a cote de ce fichier sous le nom
+    // exact "fond.jpg", puis remplacez la ligne par :
+    // "BackgroundImage": "/boot/firmware/photobooth/fond.jpg",
+    "BackgroundImage": "",
 
     // Resolution de l'ecran, au format LARGEURxHAUTEUR (ex: "1920x1080").
     // L'interface s'adapte automatiquement a la taille de l'ecran : pour un
@@ -41,6 +42,11 @@
   //  schema de branchement.
   // =====================================================================
   "Hardware": {
+    // "auto" = utilise les GPIO reels si le Pi expose /dev/gpiochip0,
+    // sinon clavier/fake. "fake" = force le clavier, sans ouvrir les GPIO.
+    // "linux" = force les GPIO reels (reserve au diagnostic mainteneur).
+    "Mode": "auto",
+
     // Broche du bouton PHOTO (defaut 18).
     "PhotoButtonPin": 18,
 

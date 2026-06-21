@@ -1,0 +1,12 @@
+[Unit]
+Description=Photobooth - ensure maintenance user can log in
+Before=ssh.service sshd.service getty@tty1.service photobooth-provision.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/usermod -s /bin/bash pi
+ExecStart=-/usr/bin/passwd -u pi
+ExecStart=-/usr/bin/chage -E -1 pi
+
+[Install]
+WantedBy=multi-user.target
