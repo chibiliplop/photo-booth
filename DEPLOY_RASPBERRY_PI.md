@@ -1,4 +1,15 @@
-# Déploiement sur Raspberry Pi 3 (kiosk photobooth)
+# Déploiement sur Raspberry Pi 3 (kiosk photobooth) — install MANUELLE / dev
+
+> **Quel document utiliser ?**
+> - **Installer une borne à partir de l'image distribuable** (carte SD turnkey) →
+>   [`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md) (flashage Pi Imager, etc.).
+> - **Fabriquer l'image distribuable** (mainteneur) →
+>   [`RUNBOOK_MAINTENEUR_CARTE_SD.md`](RUNBOOK_MAINTENEUR_CARTE_SD.md) + [`image-builder/`](image-builder/README.md).
+> - **Ce document** = **mise en route MANUELLE** sur un Pi (copie `scp`, install à
+>   la main, systemd) — utile pour le **développement / debug** ou comprendre les
+>   briques. Ce n'est **pas** le chemin de distribution. Les valeurs « système »
+>   (paquets, service, rendu) restent la référence ; pour une borne livrable,
+>   préférez l'image et le runbook.
 
 Ce guide déploie la nouvelle application **Photobooth.App** (.NET 8 / Avalonia) sur un Raspberry Pi 3 en mode kiosk plein écran, orientée **stabilité**. Il remplace l'ancienne app UWP (qui reste dans `CS/` à titre de référence).
 
@@ -84,7 +95,7 @@ Réglages clés pour le Pi (extrait `appsettings.json`) :
                 "KeepAliveHost": "10.5.5.9", "KeepAlivePort": 8554, "CaptureDeadlineSeconds": 15 },
   "Hardware": { "Mode": "auto", "PhotoButtonPin": 18, "VideoButtonPin": 20, "LightEnabled": true, "LightPin": 17,
                 "ButtonDebounceMs": 80, "LightSensorEnabled": false },
-  "Timings":  { "PoseMs": 2000, "CountdownStepMs": 1000, "PhotoDisplayMs": 5000, "VideoMaxSeconds": 10 },
+  "Timings":  { "PoseMs": 2000, "CountdownStepMs": 1000, "PhotoDisplayMs": 5000, "VideoCountdownSeconds": 3, "VideoMaxSeconds": 10 },
   "Theme":    { "Names": "Camille & Yann", "Year": "2020", "BackgroundImage": "avares://Photobooth.App/Assets/801x410_rick_et_morty_saison_4.jpg" }
 }
 ```

@@ -61,7 +61,7 @@ Pour chaque nouvel événement, vous pouvez personnaliser l'écran : les **prén
 ```
 {
   "Theme": {
-    "Names": "Nom de l'evenemtn",
+    "Names": "Camille & Yann",
     "Year": "2026",
     "BackgroundImage": "/boot/firmware/photobooth/fond.jpg"
   },

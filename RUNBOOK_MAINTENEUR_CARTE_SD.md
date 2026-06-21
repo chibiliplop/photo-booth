@@ -426,6 +426,8 @@ L'artefact distribuable est **`photobooth-dist.img.xz`**.
 ## PHASE 6 — Distribuer
 
 - Flasher `photobooth-dist.img.xz` directement avec Raspberry Pi Imager (il décompresse le `.xz` à la volée) ou Balena Etcher, sur les cartes à livrer ; ou livrer les cartes déjà flashées.
+- ⚠️ **Avec Raspberry Pi Imager : répondre « Non » à la personnalisation de l'OS** (sinon profil `preconfigured` injecté → fuite Wi-Fi + override). Etcher n'a pas ce piège.
+- Le **pas-à-pas complet d'installation** (flashage détaillé, premier démarrage, config, dépannage), destiné à celui qui installe une borne, est dans **[`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md)**.
 - Joindre les **2 fiches plastifiées** destinées à l'opérateur (préparation à la maison / jour J + dépannage) — voir le guide opérateur, séparé de ce runbook.
 
 ---

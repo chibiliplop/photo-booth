@@ -2,9 +2,17 @@
 
 Réécriture cross-platform (Linux / Windows / macOS, cible **Raspberry Pi 3**) de l'ancienne application UWP. L'ancien code UWP reste dans `CS/`, `GoProWifi/`, `RasberryPiLib/` à titre de référence et n'est pas modifié.
 
-- Architecture, décisions et registre des risques : voir le plan validé et `LINUX_MIGRATION_BLOCKERS.md`.
-- Déploiement Raspberry Pi : voir `DEPLOY_RASPBERRY_PI.md`.
-- Tester sans GoPro : voir `TESTING_WITHOUT_GOPRO.md` (+ ci-dessous).
+## Documentation (quel doc pour qui)
+
+| Vous voulez… | Document | Public |
+|---|---|---|
+| **Installer une borne** à partir de l'image (flasher la carte SD, premier démarrage) | [`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md) | installateur |
+| **Fabriquer** l'image SD distribuable (reproductible, CI, sans Pi) | [`image-builder/README.md`](image-builder/README.md) + [`RUNBOOK_MAINTENEUR_CARTE_SD.md`](RUNBOOK_MAINTENEUR_CARTE_SD.md) | mainteneur |
+| **Exploiter** la borne en événement (noms/fond/Wi-Fi, dépannage sur place) | [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md) | opérateur |
+| **Mettre en route à la main** sur un Pi (dev / debug, `scp` + systemd) | [`DEPLOY_RASPBERRY_PI.md`](DEPLOY_RASPBERRY_PI.md) | dev |
+| Comprendre l'architecture, décisions, risques | le plan validé + [`LINUX_MIGRATION_BLOCKERS.md`](LINUX_MIGRATION_BLOCKERS.md) | dev |
+| Tester **sans GoPro** | [`TESTING_WITHOUT_GOPRO.md`](TESTING_WITHOUT_GOPRO.md) (+ ci-dessous) | dev |
+| Le **kit de déploiement** (units, provisioning, modèles FAT32) | [`deploy/README.md`](deploy/README.md) | mainteneur |
 
 ## Structure (`src/`)
 
