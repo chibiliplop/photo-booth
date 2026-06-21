@@ -164,6 +164,30 @@ systemctl disable getty@tty1.service >/dev/null 2>&1 || true
 systemctl mask    getty@tty1.service >/dev/null 2>&1 || \
     ln -sf /dev/null /etc/systemd/system/getty@tty1.service
 
+# Neutralise l'ASSISTANT DE PREMIÈRE CONFIGURATION de Raspberry Pi OS (Bookworm/
+# Trixie). Sinon le 1er boot ouvre un wizard interactif sur tty1 qui réclame la
+# création d'un utilisateur (username + mot de passe) AVANT de rendre la main au
+# kiosk. L'utilisateur 'pi' existe déjà (cf. §1.3), on coupe donc le wizard :
+#   1) userconf.txt sur la FAT = mécanisme OFFICIEL headless : présent, le
+#      firstboot configure l'utilisateur SANS rien demander.
+#   2) masquage du service interactif (ceinture + bretelles).
+say "Neutralisation de l'assistant de première configuration (userconf)."
+PB_PW_HASH=""
+if command -v openssl >/dev/null 2>&1; then
+    PB_PW_HASH="$(printf '%s' "$PI_PASSWORD" | openssl passwd -6 -stdin 2>/dev/null || true)"
+fi
+if [ -n "$PB_PW_HASH" ]; then
+    printf 'pi:%s\n' "$PB_PW_HASH" > "$BOOT_DIR/userconf.txt"
+    chmod 0644 "$BOOT_DIR/userconf.txt"
+    say "userconf.txt écrit : utilisateur 'pi' pré-configuré, aucun prompt au 1er boot."
+else
+    warn "openssl absent : userconf.txt non écrit (on compte sur le masquage du service)."
+fi
+systemctl mask userconfig.service >/dev/null 2>&1 \
+    || ln -sf /dev/null /etc/systemd/system/userconfig.service
+systemctl disable userconfig.service >/dev/null 2>&1 || true
+say "userconfig.service masqué."
+
 # Activation SSH (maintenance). RPi OS régénère les clés d'hôte au 1er boot.
 if [ "$WANT_SSH" = "1" ]; then
     systemctl enable ssh >/dev/null 2>&1 || systemctl enable sshd >/dev/null 2>&1 || \
