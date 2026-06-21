@@ -43,12 +43,12 @@ Ce guide déploie la nouvelle application **Photobooth.App** (.NET 8 / Avalonia)
    ```bash
    sudo apt update
    sudo apt install -y \
-     gpiod libgpiod2 \
+     gpiod libgpiod3 \
      i2c-tools \
-     libgbm1 libgl1-mesa-dri libegl1-mesa libinput10 fontconfig
+     libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig
    ```
-   - `gpiod`/`libgpiod2` : accès GPIO (caractère device `/dev/gpiochip*`).
-   - `libgbm1 libgl1-mesa-dri libegl1-mesa libinput10` : pile d'affichage DRM/FBDev + entrées.
+   - `gpiod`/`libgpiod3` : accès GPIO (caractère device `/dev/gpiochip*`). Sur RPi OS Bullseye/Bookworm, le paquet s'appelle encore `libgpiod2`.
+   - `libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10` : pile d'affichage DRM/FBDev + entrées. Sur Bookworm/antérieur, `libegl1 libegl-mesa0` peut être remplacé par le paquet transitionnel `libegl1-mesa`.
    - `fontconfig` : la police est embarquée dans l'app, mais fontconfig aide au rendu texte.
 
 3. Activer I2C (seulement si vous utilisez le capteur de lumière) :

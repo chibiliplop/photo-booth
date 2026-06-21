@@ -99,10 +99,17 @@ done
 # -----------------------------------------------------------------------------
 say "Installation des paquets système."
 apt-get update
+# NB noms de paquets (RPi OS Trixie / Debian 13, base de raspios_lite_arm64_latest) :
+#   - libgpiod2  -> libgpiod3       (bump ABI libgpiod 1.x -> 2.x ; compatible
+#                                     avec System.Device.Gpio 3.2.0 qui sait
+#                                     piloter libgpiod.so.3 / API v2).
+#   - libegl1-mesa (paquet transitionnel, SUPPRIMÉ depuis Bookworm) -> on installe
+#                  le loader GLVND 'libegl1' + l'implémentation Mesa 'libegl-mesa0'.
+# Un paquet introuvable fait sortir apt en code 100 et casse tout le build.
 apt-get install -y --no-install-recommends \
-    gpiod libgpiod2 \
+    gpiod libgpiod3 \
     i2c-tools \
-    libgbm1 libgl1-mesa-dri libegl1-mesa libinput10 fontconfig
+    libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig
 
 # 'render' et 'gpio' peuvent n'apparaître qu'après l'install : on (re)tente l'ajout.
 for grp in gpio render i2c; do
