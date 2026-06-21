@@ -6,7 +6,7 @@ Réécriture cross-platform (Linux / Windows / macOS, cible **Raspberry Pi 3**) 
 
 | Vous voulez… | Document | Public |
 |---|---|---|
-| **Installer une borne** à partir de l'image (flasher la carte SD, premier démarrage) | [`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md) | installateur |
+| **Monter et installer une borne** (matériel + câblage GPIO + flasher la carte + 1ᵉʳ boot) | [`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md) | monteur / installateur |
 | **Fabriquer** l'image SD distribuable (reproductible, CI, sans Pi) | [`image-builder/README.md`](image-builder/README.md) + [`RUNBOOK_MAINTENEUR_CARTE_SD.md`](RUNBOOK_MAINTENEUR_CARTE_SD.md) | mainteneur |
 | **Exploiter** la borne en événement (noms/fond/Wi-Fi, dépannage sur place) | [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md) | opérateur |
 | **Mettre en route à la main** sur un Pi (dev / debug, `scp` + systemd) | [`DEPLOY_RASPBERRY_PI.md`](DEPLOY_RASPBERRY_PI.md) | dev |

@@ -2,9 +2,13 @@
 
 Bienvenue ! Ce guide vous explique tout, pas à pas. Pas besoin d'être technicien : il suffit de brancher quelques câbles, et de modifier trois petits fichiers sur une carte mémoire quand vous changez d'événement. Prenez votre temps, tout est prévu pour que ce soit simple et sans risque.
 
+> **À qui s'adresse ce guide** : à l'**utilisateur d'une borne déjà montée** (assemblée par la personne qui l'a construite). Si c'est **vous** qui construisez la borne — vous fournissez le Raspberry Pi, l'écran, les boutons, la GoPro, le câblage — et installez le logiciel, commencez d'abord par **`INSTALLATION_BORNE.md`** (montage, câblage GPIO, flashage de la carte). Ce guide-ci prend la suite, une fois la borne assemblée.
+
 ---
 
-## Ce qu'il y a dans la boîte
+## Ce que comprend une borne montée
+
+> *(La borne est assemblée par celui qui la construit ; voici ce qu'elle réunit. Le projet, lui, ne fournit que le logiciel.)*
 
 - **La borne** (le boîtier qui fait tout fonctionner). Une carte mémoire est déjà installée à l'intérieur.
 - **L'alimentation de la borne** (le chargeur qui se branche sur une prise de courant).

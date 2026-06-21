@@ -1,8 +1,11 @@
 # Installation d'une borne — de l'image à la borne qui tourne
 
-> **Pour qui** : la personne qui **installe une borne** sur un Raspberry Pi à
-> partir de l'image distribuable (`photobooth-dist.img.xz`). Profil : à l'aise
-> avec un PC, pas forcément développeur.
+> **Pour qui** : la personne qui **construit/installe une borne** sur son propre
+> Raspberry Pi à partir de l'image logicielle (`photobooth-dist.img.xz`).
+> **Ce projet distribue un LOGICIEL, pas un produit matériel** : vous fournissez et
+> assemblez vous-même le matériel (Pi, écran, boutons, lumière éventuelle, GoPro,
+> câblage). Profil : à l'aise avec un PC ; le câblage GPIO demande un minimum de
+> bricolage électronique (voir §1.1).
 > **Résultat** : une carte SD qui, une fois insérée et branchée, démarre **seule**
 > en plein écran et est prête dès le bandeau vert.
 >
@@ -31,7 +34,10 @@ est *turnkey*.
 
 ---
 
-## 1. Matériel requis
+## 1. Matériel requis (vous le fournissez)
+
+Nous fournissons l'**image logicielle** ; **tout le matériel ci-dessous est à
+vous** :
 
 | Élément | Détail |
 |---|---|
@@ -39,13 +45,55 @@ est *turnkey*.
 | **Carte microSD** | **16 Go** recommandé (8 Go minimum), microSD de marque (l'endurance compte). |
 | **Lecteur de carte** | Fente SD du PC ou adaptateur USB. |
 | **Écran** | Entrée **HDMI** + son câble. |
-| **GoPro** | En Wi-Fi (voir le guide opérateur pour l'allumage/veille). |
-| **Boutons / lumière** | Photo, vidéo (+ lumière optionnelle), câblés sur le header GPIO. Câblage = guide opérateur. |
-| **Alimentation** | L'alim officielle du Pi (sous-alimenter = source n°1 d'instabilité). |
+| **GoPro** | En Wi-Fi (allumage/veille : voir le guide opérateur). |
+| **Boutons / lumière** | Bouton photo, bouton vidéo (+ lumière optionnelle), câblés sur le header GPIO → **§1.1**. |
+| **Alimentation** | L'alim **officielle** du Pi (sous-alimenter = source n°1 d'instabilité). |
 
 > **Compatibilité** : le **même** `.img.xz` boote sur Pi 3 et Pi 4. Il faut juste
 > que le **modèle visé ait été validé une fois** par le mainteneur (rendu, boutons,
 > GoPro). En cas de doute sur le modèle, demandez au mainteneur.
+
+### 1.1 Câblage des boutons et de la lumière (GPIO)
+
+Numérotation **BCM** (les numéros « GPIO », pas la position physique des broches).
+Broches **par défaut** :
+
+| Fonction | Broche (BCM) par défaut | Câblage |
+|---|---|---|
+| Bouton **photo** | **GPIO 18** | bouton entre la broche et **GND** (masse). |
+| Bouton **vidéo** | **GPIO 20** | bouton entre la broche et **GND**. |
+| **Lumière** (optionnelle) | **GPIO 17** | sortie **active-high** (HIGH = allumé). |
+
+- **Pull-up externe ~10 kΩ recommandé** sur GPIO 18 et 20 (vers 3,3 V) : le pull-up
+  interne du Pi 3 est peu fiable. Le bouton tire la broche à la masse quand on
+  appuie.
+- ⚠️ **Lumière** : une broche GPIO **ne pilote pas** une lampe directement (3,3 V,
+  quelques mA). Passez par un **relais ou un MOSFET** commandé par GPIO 17. Sans
+  lumière ? Voir `LightEnabled=false` en §1.2.
+- (Optionnel) **capteur de lumière MAX44009** sur I2C bus 1 (GPIO2/SDA, GPIO3/SCL),
+  adresse `0x4A` — désactivé par défaut.
+
+### 1.2 Changer les broches GPIO (si votre câblage diffère)
+
+Les broches sont **configurables** sans recompiler : tout est dans le bloc
+`Hardware` du fichier **`photobooth.json`** (sur la carte SD, voir §4). Adaptez-le
+à VOTRE câblage :
+
+```jsonc
+"Hardware": {
+  "PhotoButtonPin": 18,   // broche BCM du bouton photo
+  "VideoButtonPin": 20,   // broche BCM du bouton vidéo
+  "LightEnabled": true,   // false = borne SANS lumière (la broche n'est jamais ouverte)
+  "LightPin": 17          // broche BCM de la sortie lumière (ignorée si LightEnabled=false)
+}
+```
+
+- Valeurs BCM **0 à 27**, **sans doublon**. Une valeur invalide n'empêche **pas**
+  le démarrage : la borne affiche un **bandeau rouge** à l'écran (pas de crash).
+- `LightEnabled: false` → borne **sans lumière** : tout fonctionne normalement, la
+  broche lumière n'est jamais utilisée.
+- Ce bloc est marqué *avancé* dans le fichier : l'**opérateur** d'événement n'y
+  touche pas ; c'est **vous, au montage**, qui l'ajustez une fois.
 
 ---
 
@@ -139,7 +187,7 @@ Ouvrez le lecteur **`bootfs`**, puis le dossier **`photobooth`**. Vous y trouver
 | Fichier | À régler | Indispensable ? |
 |---|---|---|
 | **`wifi.txt`** | **SSID + mot de passe de la GoPro** | **Oui** — sinon la borne ne trouve pas la GoPro |
-| `photobooth.json` | Noms, année ; mode `http` (réel) ou `fake` (démo) | recommandé |
+| `photobooth.json` | Noms, année ; mode `http` (réel) ou `fake` (démo). Contient aussi le bloc **`Hardware`** (broches GPIO → §1.2) | recommandé |
 | `fond.jpg` | Remplacer par votre image (garder ce nom exact) | optionnel |
 | `admin.txt` | **Avancé** : mot de passe SSH `pi` (voir §6) | non, l'opérateur n'y touche pas |
 | `LISEZ-MOI.txt` | notice (ne pas éditer) | — |
