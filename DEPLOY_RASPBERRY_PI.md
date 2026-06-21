@@ -124,13 +124,13 @@ scp -r publish pi@raspberrypi:/home/pi/photobooth
 ssh pi@raspberrypi 'chmod +x /home/pi/photobooth/Photobooth.App'
 ```
 
-### Lancer en kiosk FBDev (plein écran, sans bureau)
+### Lancer en kiosk DRM (plein écran, sans bureau)
 ```bash
-sudo /home/pi/photobooth/Photobooth.App --fbdev
+sudo /home/pi/photobooth/Photobooth.App --drm
 ```
-`--fbdev` est le backend logiciel recommandé pour l'image turnkey sur Pi 3. Si vous voulez comparer avec DRM, gardez en tête que `--drm`/`StartLinuxDrm` est *toujours* accéléré matériellement en Avalonia 11 et peut donner un écran noir avec le GPU VC4. Dans ce cas seulement, testez :
+`--drm` est le backend par défaut de l'image turnkey : il utilise KMS/DRM et rend les animations nettement plus fluides sur le Pi validé. Si un modèle de Pi ou un écran affiche un écran noir / EGL instable, replier sur FBDev (logiciel, plus lent mais robuste) :
 ```bash
-LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe /home/pi/photobooth/Photobooth.App --drm
+LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe /home/pi/photobooth/Photobooth.App --fbdev
 ```
 
 ### Test rapide en fenêtre (si vous gardez le bureau)
@@ -153,9 +153,7 @@ Type=simple
 User=pi
 SupplementaryGroups=gpio i2c video input render
 WorkingDirectory=/home/pi/photobooth
-ExecStart=/home/pi/photobooth/Photobooth.App --fbdev
-Environment=LIBGL_ALWAYS_SOFTWARE=1
-Environment=GALLIUM_DRIVER=llvmpipe
+ExecStart=/home/pi/photobooth/Photobooth.App --drm
 Environment=DOTNET_GCHeapHardLimit=0x18000000
 Restart=always
 RestartSec=3
@@ -193,7 +191,7 @@ Le keepalive UDP de l'app (toutes les 5 s) empêche la GoPro de se mettre en vei
 
 **Phase 0 — spikes (à faire en premier, ils dé-risquent le reste) :**
 - [ ] `kmscube` affiche un cube → la pile DRM fonctionne.
-- [ ] `Photobooth.App --drm` (et au besoin `+ LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe`) affiche la borne plein écran à un FPS correct, RAM stable (`free -m`, pas de montée continue), pas d'écran noir.
+- [ ] `Photobooth.App --drm` affiche la borne plein écran à un FPS correct, RAM stable (`free -m`, pas de montée continue), pas d'écran noir. Si un écran noir apparaît sur un autre matériel, valider le fallback `--fbdev`.
 - [ ] `gpiodetect` montre `gpiochip0` ; appuyer sur les boutons déclenche bien la séquence (logs).
 - [ ] (si `LightEnabled=true`) La lumière (GPIO 17) s'allume/s'éteint pendant la capture.
 - [ ] (si capteur) `i2cdetect -y 1` montre `0x4a`.

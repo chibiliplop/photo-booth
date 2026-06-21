@@ -69,13 +69,11 @@ internal static class Program
 
             var builder = BuildAvaloniaApp();
             if (args.Contains("--fbdev"))
-                // Kiosk Pi 3 robuste : FBDev est logiciel et évite les écrans noirs DRM/VC4.
+                // Fallback logiciel si DRM/KMS affiche un écran noir sur un matériel donné.
                 return builder.StartLinuxFbDev(args);
 
             if (args.Contains("--drm"))
-                // Kiosk Pi. DRM en Avalonia 11 = TOUJOURS accéléré (GPU VC4) : forcer le GL
-                // logiciel via Mesa (LIBGL_ALWAYS_SOFTWARE=1, GALLIUM_DRIVER=llvmpipe), ou
-                // préférer --fbdev si le Pi affiche un écran noir.
+                // Kiosk Pi validé : DRM/KMS est accéléré GPU et nettement plus fluide.
                 return builder.StartLinuxDrm(args, null, 1.0);
 
             return builder.StartWithClassicDesktopLifetime(args);

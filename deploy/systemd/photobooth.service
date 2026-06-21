@@ -25,16 +25,13 @@ Type=simple
 User=pi
 SupplementaryGroups=gpio i2c video input render
 WorkingDirectory=/home/pi/photobooth
-ExecStart=/home/pi/photobooth/Photobooth.App --fbdev
+ExecStart=/home/pi/photobooth/Photobooth.App --drm
 
-# --- Rendu logiciel (IMPORTANT, voir RUNBOOK §rendu) ---------------------
-# En Avalonia 11, StartLinuxDrm (--drm) est TOUJOURS accéléré matériellement :
-# il passe par le GPU VC4 du Pi 3, source documentée de plantages EGL / écran noir.
-# La variable AVALONIA_RENDERER=software N'EXISTE PLUS en Avalonia 11 (no-op) :
-# l'image turnkey utilise donc FBDev (--fbdev), backend logiciel plus prévisible
-# sur Pi 3. Les variables Mesa restent inoffensives si le backend les ignore.
-Environment=LIBGL_ALWAYS_SOFTWARE=1
-Environment=GALLIUM_DRIVER=llvmpipe
+# --- Rendu GPU DRM/KMS (vc4-kms-v3d requis dans /boot/firmware/config.txt) ---
+# StartLinuxDrm passe par le GPU VideoCore IV via Mesa vc4 : transforms et opacité
+# sont accélérés matériellement, ce qui rend les animations de cartes fluides.
+# Validé sur Raspberry Pi OS Trixie — si la carte affiche un écran noir, repasser
+# à --fbdev et remettre LIBGL_ALWAYS_SOFTWARE=1 + GALLIUM_DRIVER=llvmpipe.
 
 # Plafonne le tas .NET (~384 Mo) pour ne pas faire swapper le Pi (1 Go).
 Environment=DOTNET_GCHeapHardLimit=0x18000000
