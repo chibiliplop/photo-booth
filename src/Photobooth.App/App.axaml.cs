@@ -106,6 +106,9 @@ public partial class App : Application
         if (Program.ScreenshotPath is { } shot && root is not null)
             ScheduleVerificationScreenshots(root, workflow, shot);
 
+        if (Program.ScreenshotVideoPath is { } vshot && root is not null)
+            ScheduleVideoVerificationScreenshots(root, workflow, vshot);
+
         base.OnFrameworkInitializationCompleted();
     }
 
@@ -139,6 +142,19 @@ public partial class App : Application
             Capture(root, path);
             (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
         }, TimeSpan.FromSeconds(8.0));
+    }
+
+    // Dev/CI only: toggle video, then snapshot the clapperboard count-in and the recording film overlay, then exit.
+    // Assumes the default timings (count-in 3×1s, then recording): capture mid count-in, then mid take.
+    private void ScheduleVideoVerificationScreenshots(Control root, PhotoboothWorkflow workflow, string path)
+    {
+        DispatcherTimer.RunOnce(() => workflow.Submit(new BoothCommand.VideoToggleRequested()), TimeSpan.FromSeconds(0.5));
+        DispatcherTimer.RunOnce(() => Capture(root, Suffix(path, "-countin")), TimeSpan.FromSeconds(2.0));
+        DispatcherTimer.RunOnce(() =>
+        {
+            Capture(root, Suffix(path, "-recording"));
+            (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }, TimeSpan.FromSeconds(5.0));
     }
 
     private static void Capture(Control root, string path)

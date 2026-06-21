@@ -64,12 +64,13 @@ jobs:
 
       - name: Run CustoPiZer
         run: |
+          # Pas de secret PI_PASSWORD : le mot de passe baké n'est qu'un défaut
+          # (raspberry), surchargeable PAR CARTE via /boot/firmware/photobooth/admin.txt.
           docker run --rm --privileged \
             -v /dev:/dev \
             -v "${{ github.workspace }}/image-builder":/CustoPiZer/workspace \
             -v "${{ github.workspace }}/image-builder/config.local":/CustoPiZer/config.local \
             -e PHOTOBOOTH_OVERLAY=${{ steps.flags.outputs.overlay }} \
-            -e PI_PASSWORD="${{ secrets.PI_PASSWORD }}" \
             ghcr.io/octoprint/custopizer:latest
 
       - name: Shrink + compress (PiShrink -acZ)

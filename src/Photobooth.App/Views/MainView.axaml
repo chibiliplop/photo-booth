@@ -4,6 +4,61 @@
              x:Class="Photobooth.App.Views.MainView"
              x:DataType="vm:MainViewModel">
 
+  <!-- Video-mode animations. All are cheap opacity/transform tweens (no per-frame bitmaps) so they stay
+       smooth on the Raspberry Pi 3 software renderer. They only animate while their element is visible. -->
+  <UserControl.Styles>
+
+    <!-- Clapperboard arm: open, hold, then SNAP shut (the "clap"), looping ~once per count-in beat. -->
+    <Style Selector="Border.clapper">
+      <Setter Property="RenderTransformOrigin" Value="0%,100%" />
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" IterationCount="INFINITE" Easing="QuadraticEaseInOut">
+          <KeyFrame Cue="0%"><Setter Property="RenderTransform" Value="rotate(0deg)" /></KeyFrame>
+          <KeyFrame Cue="12%"><Setter Property="RenderTransform" Value="rotate(-34deg)" /></KeyFrame>
+          <KeyFrame Cue="70%"><Setter Property="RenderTransform" Value="rotate(-34deg)" /></KeyFrame>
+          <KeyFrame Cue="82%"><Setter Property="RenderTransform" Value="rotate(0deg)" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="RenderTransform" Value="rotate(0deg)" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Blinking red REC dot. -->
+    <Style Selector="Ellipse.recDot">
+      <Style.Animations>
+        <Animation Duration="0:0:1" IterationCount="INFINITE">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1.0" /></KeyFrame>
+          <KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.12" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1.0" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Subtle whole-frame flicker, like an old projector lamp. -->
+    <Style Selector="Rectangle.flicker">
+      <Style.Animations>
+        <Animation Duration="0:0:0.5" IterationCount="INFINITE">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.02" /></KeyFrame>
+          <KeyFrame Cue="35%"><Setter Property="Opacity" Value="0.09" /></KeyFrame>
+          <KeyFrame Cue="65%"><Setter Property="Opacity" Value="0.0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.05" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Vertical film scratches that drift sideways and fade in/out. -->
+    <Style Selector="Rectangle.scratch">
+      <Style.Animations>
+        <Animation Duration="0:0:1.3" IterationCount="INFINITE">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.0" /><Setter Property="RenderTransform" Value="translateX(0px)" /></KeyFrame>
+          <KeyFrame Cue="15%"><Setter Property="Opacity" Value="0.35" /></KeyFrame>
+          <KeyFrame Cue="55%"><Setter Property="Opacity" Value="0.12" /><Setter Property="RenderTransform" Value="translateX(38px)" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.0" /><Setter Property="RenderTransform" Value="translateX(-26px)" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+  </UserControl.Styles>
+
   <Panel Background="Black">
 
     <!-- Full-screen background: always covers the physical screen, regardless of its resolution. -->
@@ -93,13 +148,125 @@
           </Grid>
         </Border>
 
-        <!-- Rec indicator -->
-        <StackPanel Orientation="Horizontal" Spacing="8"
-                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24"
-                    ZIndex="200" IsVisible="{Binding IsRecording}">
-          <Ellipse Width="40" Height="40" Fill="Red" Stroke="Black" StrokeThickness="2" />
-          <TextBlock Text="Rec" FontSize="40" Foreground="White" VerticalAlignment="Center" />
-        </StackPanel>
+        <!-- ============================================================================
+             VIDEO MODE — full-screen cinema takeover.
+             Phase 1 (IsVideoCountdown): a clapperboard with a 3·2·1 count-in so guests
+                      know exactly when filming starts; the clapper claps on each beat.
+             Phase 2 (IsRecording): vintage black-&-white film look (vignette, sprocket
+                      holes, drifting scratches, projector flicker) + a blinking REC and a
+                      reverse countdown of the seconds left to film.
+             ============================================================================ -->
+        <Panel ZIndex="250" IsVisible="{Binding IsVideoActive}">
+
+          <!-- Cinema backdrop + vignette (dark edges) -->
+          <Panel Background="#0A0A0A" />
+          <Border>
+            <Border.Background>
+              <RadialGradientBrush GradientOrigin="50%,50%" Center="50%,50%" RadiusX="75%" RadiusY="75%">
+                <GradientStop Offset="0.5" Color="#00000000" />
+                <GradientStop Offset="1.0" Color="#CC000000" />
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+
+          <!-- ===================== PHASE 1 — count-in clapperboard ===================== -->
+          <Grid IsVisible="{Binding IsVideoCountdown}" Width="560"
+                HorizontalAlignment="Center" VerticalAlignment="Center" RowDefinitions="64,300">
+
+            <!-- Hinged striped clapper arm (claps via the Border.clapper animation) -->
+            <Border Grid.Row="0" Classes="clapper" Height="64" Margin="0,0,0,-4"
+                    Background="#111" ClipToBounds="True" ZIndex="2">
+              <StackPanel Orientation="Horizontal" Margin="-40,0" ClipToBounds="False">
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#F2F2F2"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+                <Border Width="52" Background="#111"><Border.RenderTransform><SkewTransform AngleX="-22" /></Border.RenderTransform></Border>
+              </StackPanel>
+            </Border>
+
+            <!-- Slate body -->
+            <Border Grid.Row="1" Background="#161616" CornerRadius="3"
+                    BorderBrush="#3A3A3A" BorderThickness="2">
+              <Grid RowDefinitions="Auto,*">
+                <StackPanel Grid.Row="0" Margin="22,16,22,8" Spacing="6">
+                  <Grid ColumnDefinitions="Auto,*"><TextBlock Grid.Column="0" Text="SCÈNE" Foreground="#8A8A8A" FontSize="20" FontWeight="Bold" /><Border Grid.Column="1" Height="2" Background="#3A3A3A" VerticalAlignment="Center" Margin="12,0,0,0" /></Grid>
+                  <Grid ColumnDefinitions="Auto,*"><TextBlock Grid.Column="0" Text="PRISE" Foreground="#8A8A8A" FontSize="20" FontWeight="Bold" /><Border Grid.Column="1" Height="2" Background="#3A3A3A" VerticalAlignment="Center" Margin="12,0,0,0" /></Grid>
+                </StackPanel>
+                <TextBlock Grid.Row="1" Text="{Binding VideoCountdownText}" Foreground="#FAFAFA"
+                           FontSize="190" FontWeight="Bold" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </Grid>
+
+          <!-- ===================== PHASE 2 — recording film look ===================== -->
+          <Panel IsVisible="{Binding IsRecording}">
+
+            <!-- Film-strip sprocket holes down both edges -->
+            <Border Width="74" HorizontalAlignment="Left" Background="#0E0E0E">
+              <StackPanel VerticalAlignment="Center" Spacing="26">
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+              </StackPanel>
+            </Border>
+            <Border Width="74" HorizontalAlignment="Right" Background="#0E0E0E">
+              <StackPanel VerticalAlignment="Center" Spacing="26">
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+                <Border Width="30" Height="40" CornerRadius="5" Background="#2A2A2A" />
+              </StackPanel>
+            </Border>
+
+            <!-- Drifting scratches -->
+            <Rectangle Classes="scratch" Width="2" Fill="#DDDDDD" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="-260,0,0,0" />
+            <Rectangle Classes="scratch" Width="3" Fill="#BFBFBF" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="180,0,0,0" />
+            <Rectangle Classes="scratch" Width="2" Fill="#CFCFCF" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="420,0,0,0" />
+
+            <!-- Projector flicker veil (whole frame) -->
+            <Rectangle Classes="flicker" Fill="White" />
+
+            <!-- Blinking REC, top-left -->
+            <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="104,40,0,0">
+              <Ellipse Classes="recDot" Width="34" Height="34" Fill="#E0211B" VerticalAlignment="Center" />
+              <TextBlock Text="REC" FontSize="36" FontWeight="Bold" Foreground="#F2F2F2" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Centre: "it's rolling" + reverse countdown -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0">
+              <TextBlock Text="ÇA TOURNE !" Foreground="#EDEDED" FontSize="56" FontWeight="Bold"
+                         TextAlignment="Center" HorizontalAlignment="Center" />
+              <TextBlock Text="{Binding RecordingRemainingText}" Foreground="#FAFAFA" FontSize="200"
+                         FontWeight="Bold" TextAlignment="Center" HorizontalAlignment="Center" Margin="0,-10" />
+              <TextBlock Text="secondes restantes" Foreground="#9A9A9A" FontSize="28"
+                         TextAlignment="Center" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Time-remaining bar (shrinks as the take runs out) -->
+            <ProgressBar Minimum="0" Maximum="{Binding RecordingTotal}" Value="{Binding RecordingRemaining}"
+                         Height="8" CornerRadius="4" VerticalAlignment="Bottom" Margin="160,0,160,52"
+                         Foreground="#ECECEC" Background="#33FFFFFF" />
+
+          </Panel>
+        </Panel>
 
         <!-- Persistent GoPro connectivity dot (vert = prête, orange = connexion, rouge = indisponible) -->
         <Ellipse Width="22" Height="22" ZIndex="200"

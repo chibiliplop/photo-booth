@@ -30,6 +30,11 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private readonly ILogger<MainViewModel> _log;
     private int _currentFrame;
     private bool _isRecording;
+    private bool _isVideoCountdown;
+    private string _videoCountdownText = string.Empty;
+    private int _recordingTotal = 1;
+    private int _recordingRemaining;
+    private DispatcherTimer? _recordingTimer;
     private string? _status;
     private BoothStatusLevel _statusLevel = BoothStatusLevel.Info;
     private bool _hasConnectivity;
@@ -56,11 +61,58 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     public IBrush MessageBrush { get; }
     public FontFamily TitleFont { get; }
 
+    /// <summary>True while a take is being filmed: drives the blinking REC, the film overlay and the remaining-time countdown.</summary>
     public bool IsRecording
     {
         get => _isRecording;
-        private set => SetField(ref _isRecording, value);
+        private set
+        {
+            if (SetField(ref _isRecording, value))
+                Raise(nameof(IsVideoActive));
+        }
     }
+
+    /// <summary>True during the clapperboard count-in (3·2·1) that precedes filming.</summary>
+    public bool IsVideoCountdown
+    {
+        get => _isVideoCountdown;
+        private set
+        {
+            if (SetField(ref _isVideoCountdown, value))
+                Raise(nameof(IsVideoActive));
+        }
+    }
+
+    /// <summary>The big number on the clapperboard slate during the count-in.</summary>
+    public string VideoCountdownText
+    {
+        get => _videoCountdownText;
+        private set => SetField(ref _videoCountdownText, value);
+    }
+
+    /// <summary>Whether the full-screen cinema overlay (count-in or recording) is up. Hides the slideshow cards behind it.</summary>
+    public bool IsVideoActive => _isRecording || _isVideoCountdown;
+
+    /// <summary>Take length in seconds — the maximum value of the remaining-time bar.</summary>
+    public int RecordingTotal
+    {
+        get => _recordingTotal;
+        private set => SetField(ref _recordingTotal, value);
+    }
+
+    /// <summary>Seconds left in the current take, counting down to 0.</summary>
+    public int RecordingRemaining
+    {
+        get => _recordingRemaining;
+        private set
+        {
+            if (SetField(ref _recordingRemaining, value))
+                Raise(nameof(RecordingRemainingText));
+        }
+    }
+
+    /// <summary>The big reverse-countdown number shown while filming.</summary>
+    public string RecordingRemainingText => _recordingRemaining.ToString();
 
     public string? Status
     {
@@ -154,8 +206,50 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         }));
     }
 
-    public void SetRecording(bool recording) =>
-        Dispatcher.UIThread.Post(() => IsRecording = recording);
+    public void ShowVideoCountdown(int seconds) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            IsRecording = false;
+            VideoCountdownText = seconds.ToString();
+            IsVideoCountdown = true;
+        });
+
+    public void SetRecording(bool recording, int totalSeconds = 0) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (recording) StartRecordingUi(totalSeconds);
+            else StopRecordingUi();
+        });
+
+    private void StartRecordingUi(int totalSeconds)
+    {
+        IsVideoCountdown = false; // the count-in is over — cut to the film overlay
+        RecordingTotal = Math.Max(1, totalSeconds);
+        RecordingRemaining = RecordingTotal;
+        IsRecording = true;
+
+        EnsureRecordingTimer();
+        _recordingTimer!.Stop();
+        _recordingTimer.Start();
+    }
+
+    private void StopRecordingUi()
+    {
+        _recordingTimer?.Stop();
+        IsRecording = false;
+        IsVideoCountdown = false;
+    }
+
+    private void EnsureRecordingTimer()
+    {
+        if (_recordingTimer is not null) return;
+        _recordingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _recordingTimer.Tick += (_, _) =>
+        {
+            if (RecordingRemaining > 0) RecordingRemaining--;
+            if (RecordingRemaining <= 0) _recordingTimer!.Stop(); // workflow's auto-stop hides the overlay
+        };
+    }
 
     public void SetStatus(string? status, BoothStatusLevel level = BoothStatusLevel.Info) =>
         Dispatcher.UIThread.Post(() =>

@@ -9,6 +9,9 @@ public sealed class TimingOptions
     public int CountdownStepMs { get; set; } = 1000;
     public int LightSettleMs { get; set; } = 1000;
     public int PhotoDisplayMs { get; set; } = 5000;
+
+    /// <summary>Cinematic clapperboard count-in (beats) before filming starts; 0 disables it. Each beat lasts <see cref="CountdownStepMs"/>.</summary>
+    public int VideoCountdownSeconds { get; set; } = 3;
     public int VideoMaxSeconds { get; set; } = 10;
     public int SlideshowIntervalSeconds { get; set; } = 5;
 
@@ -21,6 +24,7 @@ public sealed class TimingOptions
     public string? Validate()
     {
         if (CountdownStepMs <= 0) return "Timings.CountdownStepMs must be > 0.";
+        if (VideoCountdownSeconds < 0) return "Timings.VideoCountdownSeconds must be >= 0 (0 disables the count-in).";
         if (VideoMaxSeconds <= 0) return "Timings.VideoMaxSeconds must be > 0.";
         if (SlideshowIntervalSeconds <= 0) return "Timings.SlideshowIntervalSeconds must be > 0.";
         if (StatusPollSeconds <= 0) return "Timings.StatusPollSeconds must be > 0.";

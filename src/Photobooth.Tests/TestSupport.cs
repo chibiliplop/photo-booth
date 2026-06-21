@@ -22,19 +22,28 @@ internal sealed class RecordingDisplay : IPhotoDisplay
     private readonly List<string> _messages = new();
     private int _photoCount;
 
+    private readonly List<int> _videoCountdowns = new();
+
     public bool? Recording { get; private set; }
+    public int? RecordingTotalSeconds { get; private set; }
     public string? Status { get; private set; }
     public BoothStatusLevel? Connectivity { get; private set; }
     public int PhotoCount => Volatile.Read(ref _photoCount);
 
     public void ShowMessage(string text) { lock (_lock) _messages.Add(text); }
     public void ShowPhoto(byte[] imageData) => Interlocked.Increment(ref _photoCount);
-    public void SetRecording(bool recording) => Recording = recording;
+    public void ShowVideoCountdown(int seconds) { lock (_lock) _videoCountdowns.Add(seconds); }
+    public void SetRecording(bool recording, int totalSeconds = 0)
+    {
+        Recording = recording;
+        if (recording) RecordingTotalSeconds = totalSeconds;
+    }
     public void SetStatus(string? status, BoothStatusLevel level = BoothStatusLevel.Info) => Status = status;
     public void SetConnectivity(BoothStatusLevel level) => Connectivity = level;
 
     public bool SawMessage(string m) { lock (_lock) return _messages.Contains(m); }
     public IReadOnlyList<string> Messages { get { lock (_lock) return _messages.ToList(); } }
+    public IReadOnlyList<int> VideoCountdowns { get { lock (_lock) return _videoCountdowns.ToList(); } }
 }
 
 /// <summary>

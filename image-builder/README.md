@@ -57,10 +57,13 @@ construction d'OctoPi.
 
 - **Lancer** : onglet *Actions* → *Build SD image* → *Run workflow* (case
   `overlay` décochable pour une image dev). Ou pousser un tag `vX.Y.Z`.
-- **Mot de passe pi** : définir le secret de dépôt **`PI_PASSWORD`** (sinon
-  `raspberry` par défaut — un avertissement est loggé). SSH activé par défaut.
-- **Aucun autre secret** : l'image part en **modèles neutres** (`wifi.txt`,
+- **Aucun secret CI** : l'image part en **modèles neutres** (`wifi.txt`,
   `photobooth.json`), le vrai config est ajouté par l'opérateur sur la FAT32.
+- **Mot de passe pi (SSH)** : un **défaut** (`raspberry`) est baké, modifiable
+  au build via `PI_PASSWORD`. Surtout, il est **surchargeable par carte** via
+  `/boot/firmware/photobooth/admin.txt` (réappliqué à chaque boot → **persiste
+  sous overlay**, contrairement à un `passwd` en SSH). Donc pas de « secret » à
+  gérer en CI. SSH activable/désactivable au build via `PI_SSH` (1 par défaut).
 
 ## ⚠️ Le point à dérisquer EN PREMIER : l'overlay dans le chroot
 

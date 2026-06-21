@@ -211,6 +211,8 @@ GOPRO_PASSWORD=motdepasse-de-ma-gopro
 
 `/boot/firmware/photobooth/fond.jpg` : déposer une image de fond modèle (l'opérateur la remplacera).
 
+`/boot/firmware/photobooth/admin.txt` (**avancé, mainteneur**) : override **optionnel** du mot de passe SSH du compte `pi`. Le mot de passe baké à la fabrication n'est qu'un **défaut** (`raspberry`) ; décommenter `PI_PASSWORD=...` ici le change **par carte**, sans rebuild. `photobooth-provision.sh` le réapplique à **chaque boot** : c'est volontaire, car sous overlay un `passwd` en SSH ne persiste pas. L'opérateur d'événement n'y touche pas.
+
 **Mode démo (test sans GoPro)** : il n'y a **pas** de fichier-sentinelle `MODE_DEMO.txt` — aucun code ne le lit (vérifié dans `ServiceConfiguration.cs`). Le mode démo se règle par `"Gopro": { "Mode": "fake" }` dans `photobooth.json`. L'opérateur remet `"http"` avant le vrai événement.
 
 ### 3.2 — Service de provisioning Wi-Fi (oneshot, idempotent, à chaque boot)

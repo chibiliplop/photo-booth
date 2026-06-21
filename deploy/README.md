@@ -21,6 +21,7 @@ figé dans l'image SD par le mainteneur.
 | `boot-config/wifi.txt` | `/boot/firmware/photobooth/` | **modèle** Wi-Fi (clés `GOPRO_SSID` / `GOPRO_PASSWORD`) |
 | `boot-config/photobooth.json` | `/boot/firmware/photobooth/` | **modèle** thème (noms, année, fond, mode démo) |
 | `boot-config/LISEZ-MOI.txt` | `/boot/firmware/photobooth/` | notice opérateur (sur la carte) |
+| `boot-config/admin.txt` | `/boot/firmware/photobooth/` | **avancé** : override optionnel du mot de passe SSH `pi` (réappliqué au boot) |
 | `fond.jpg` (à ajouter) | `/boot/firmware/photobooth/` | image de fond modèle |
 
 ## Procédure complète

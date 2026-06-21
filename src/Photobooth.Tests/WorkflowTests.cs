@@ -126,6 +126,42 @@ public class WorkflowTests
     }
 
     [Fact]
+    public async Task Video_runs_clapperboard_count_in_then_records_with_take_length()
+    {
+        var rig = TestHarness.Build(NewFake(), tuneTimings: t => { t.VideoMaxSeconds = 30; t.VideoCountdownSeconds = 3; });
+        await rig.Workflow.StartAsync();
+        try
+        {
+            rig.Workflow.Submit(new BoothCommand.VideoToggleRequested());
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Workflow.State == BoothState.Recording));
+
+            Assert.Equal(new[] { 3, 2, 1 }, rig.Display.VideoCountdowns); // count-in beats, in order
+            Assert.Equal(30, rig.Display.RecordingTotalSeconds);          // UI gets the take length for its countdown
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task Double_press_during_count_in_does_not_immediately_stop_the_take()
+    {
+        var rig = TestHarness.Build(NewFake(), tuneTimings: t => { t.VideoMaxSeconds = 30; t.VideoCountdownSeconds = 3; t.CountdownStepMs = 80; });
+        await rig.Workflow.StartAsync();
+        try
+        {
+            rig.Workflow.Submit(new BoothCommand.VideoToggleRequested());
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Workflow.State == BoothState.Capturing));
+
+            rig.Workflow.Submit(new BoothCommand.VideoToggleRequested()); // mashed during the count-in -> must be ignored
+
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Workflow.State == BoothState.Recording));
+            await Task.Delay(150); // give a stray stop a chance to (wrongly) fire
+            Assert.Equal(BoothState.Recording, rig.Workflow.State); // still filming
+            Assert.True(rig.Display.Recording);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
+
+    [Fact]
     public async Task Video_auto_stops_after_max_seconds()
     {
         var rig = TestHarness.Build(NewFake(), tuneTimings: t => t.VideoMaxSeconds = 1);

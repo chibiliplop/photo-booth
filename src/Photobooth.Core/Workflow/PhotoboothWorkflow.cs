@@ -325,6 +325,20 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         var ct = watchdog.Token;
         try
         {
+            // Cinematic count-in so guests know EXACTLY when filming starts (the clapperboard claps on
+            // each beat). We hold the booth in Capturing during the count-in: this blocks the slideshow
+            // and makes extra button presses no-ops, exactly like the photo sequence.
+            SetState(BoothState.Capturing);
+            _display.SetStatus(null);
+            for (var n = _timings.VideoCountdownSeconds; n >= 1; n--)
+            {
+                _display.ShowVideoCountdown(n);
+                await Task.Delay(_timings.CountdownStepMs, ct);
+            }
+            // Drop button presses that piled up during the count-in so a double-press doesn't immediately
+            // stop the take we're about to start (presses AFTER recording begins still stop it normally).
+            DrainButtonCommands();
+
             await _goproGate.WaitAsync(ct);
             try
             {
@@ -338,12 +352,13 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
 
             SetState(BoothState.Recording);
             _display.SetStatus(null);
-            _display.SetRecording(true);
+            _display.SetRecording(true, _timings.VideoMaxSeconds);
             var epoch = ++_recordingEpoch;
             _ = AutoStopAsync(epoch, lifetime);
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
         {
+            _display.SetRecording(false);
             throw;
         }
         catch (GoProUnavailableException ex)
@@ -352,6 +367,13 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
             _display.SetRecording(false);
             _display.SetStatus("GoPro indisponible", BoothStatusLevel.Error);
             SetState(BoothState.Degraded);
+        }
+        catch (OperationCanceledException)
+        {
+            _log.LogError("Start video exceeded the {Watchdog}s watchdog; forcing reset.", _timings.WatchdogSeconds);
+            _display.SetRecording(false);
+            _display.SetStatus("Réessayez", BoothStatusLevel.Warning);
+            SetState(BoothState.Idle);
         }
         catch (Exception ex)
         {

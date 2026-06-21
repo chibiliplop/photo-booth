@@ -25,8 +25,18 @@ public interface IPhotoDisplay
     /// <summary>Show a captured/slideshow photo (raw encoded image bytes) on the next photo card.</summary>
     void ShowPhoto(byte[] imageData);
 
-    /// <summary>Toggle the red "Rec" indicator.</summary>
-    void SetRecording(bool recording);
+    /// <summary>
+    /// Cinematic count-in before filming begins: shows the clapperboard with <paramref name="seconds"/>
+    /// on the slate (3, 2, 1). Called once per beat by the workflow; recording has NOT started yet.
+    /// </summary>
+    void ShowVideoCountdown(int seconds);
+
+    /// <summary>
+    /// Toggle the recording overlay (blinking "REC", reverse time-remaining countdown, vintage film look).
+    /// <paramref name="totalSeconds"/> is the full take length so the UI can drive the remaining-time
+    /// countdown/progress; it is ignored when <paramref name="recording"/> is false.
+    /// </summary>
+    void SetRecording(bool recording, int totalSeconds = 0);
 
     /// <summary>
     /// Show a discreet operator status banner; null clears it. <paramref name="level"/> drives the colour;

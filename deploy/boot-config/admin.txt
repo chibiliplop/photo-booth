@@ -1,0 +1,21 @@
+# ============================================================
+#  AVANCE (mainteneur) — mot de passe SSH du compte "pi"
+#  L'OPERATEUR D'EVENEMENT N'A PAS BESOIN DE CE FICHIER.
+# ============================================================
+#
+# Par defaut, le mot de passe SSH est celui fige a la fabrication
+# de l'image (souvent "raspberry").
+#
+# POUR DEFINIR VOTRE PROPRE MOT DE PASSE :
+#   1) Enlevez le # au debut de la ligne PI_PASSWORD ci-dessous.
+#   2) Remplacez la valeur par votre mot de passe.
+#   3) Enregistrez, remettez la carte dans la borne, redemarrez.
+#
+# Il est REapplique a CHAQUE demarrage depuis ce fichier. C'est
+# voulu : avec l'overlay (root en lecture seule), un changement
+# fait en SSH via `passwd` ne survit PAS au reboot. Changez-le ICI.
+#
+# Note : ce fichier est lisible par quiconque a la carte SD. Sur une
+# borne hors-ligne (reseau GoPro isole), c'est sans consequence.
+#
+#PI_PASSWORD=

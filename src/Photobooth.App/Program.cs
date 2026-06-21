@@ -14,12 +14,14 @@ internal static class Program
     public static IServiceProvider Services { get; private set; } = null!;
     public static bool Fullscreen { get; private set; }
     public static string? ScreenshotPath { get; private set; }
+    public static string? ScreenshotVideoPath { get; private set; }
 
     [STAThread]
     public static int Main(string[] args)
     {
         Fullscreen = args.Contains("--fullscreen") || args.Contains("--drm");
         ScreenshotPath = ParseValue(args, "--screenshot");
+        ScreenshotVideoPath = ParseValue(args, "--screenshot-video");
 
         var baseDir = AppContext.BaseDirectory;
 

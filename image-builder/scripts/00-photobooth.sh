@@ -82,8 +82,10 @@ if ! id -u pi >/dev/null 2>&1; then
     useradd -m -d /home/pi -s /bin/bash pi
 fi
 echo "pi:${PI_PASSWORD}" | chpasswd
-[ "${PI_PASSWORD}" = "raspberry" ] && \
-    warn "Mot de passe pi = 'raspberry' (défaut). Définir le secret CI PI_PASSWORD avant distribution."
+# Ce mot de passe n'est qu'un DÉFAUT : chaque carte peut le surcharger via
+# /boot/firmware/photobooth/admin.txt (réappliqué à chaque boot, persiste sous
+# overlay). Inutile donc d'en faire un secret CI.
+say "Mot de passe pi (défaut) = '${PI_PASSWORD}'. Surchargeable par carte via admin.txt."
 
 # N'ajoute que les groupes qui existent (gpio/render/i2c arrivent avec les paquets).
 for grp in sudo gpio i2c video input render tty spi; do
@@ -175,6 +177,7 @@ mkdir -p "$PB_CFG"
 install -m 0644 /files/deploy/boot-config/wifi.txt        "$PB_CFG/wifi.txt"
 install -m 0644 /files/deploy/boot-config/photobooth.json "$PB_CFG/photobooth.json"
 install -m 0644 /files/deploy/boot-config/LISEZ-MOI.txt   "$PB_CFG/LISEZ-MOI.txt"
+install -m 0644 /files/deploy/boot-config/admin.txt       "$PB_CFG/admin.txt"
 # Image de fond modèle : prend deploy/boot-config/fond.jpg si fourni, sinon
 # dépose un placeholder 1x1 (l'opérateur remplacera). On n'échoue jamais ici.
 if [ -f /files/deploy/boot-config/fond.jpg ]; then

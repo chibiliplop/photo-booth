@@ -32,6 +32,7 @@ readonly IFACE="wlan0"
 readonly CONN_GOPRO="photobooth-gopro"
 readonly CONN_WIFI2="photobooth-wifi2"
 readonly CONN_IMAGER="preconfigured"   # profil éventuellement injecté par Raspberry Pi Imager
+readonly ADMIN_CONF="/boot/firmware/photobooth/admin.txt"   # mot de passe SSH 'pi' (optionnel)
 readonly PRIO_GOPRO=100   # la GoPro doit toujours gagner
 readonly PRIO_WIFI2=10
 
@@ -93,26 +94,54 @@ provision_wifi() {
     fi
 }
 
-main() {
-    # Garde : pas de fichier => rien à faire, sortie OK (jamais de blocage au boot).
-    if [[ ! -f "$CONF" ]]; then
-        log "Aucun fichier de configuration ($CONF) : rien à provisionner."
-        exit 0
-    fi
-    log "Lecture de la configuration depuis $CONF"
-
-    # --- Neutralise tout profil Wi-Fi injecté par Raspberry Pi Imager --------
-    # La customisation OS d'Imager (custom.toml / firstrun, Bookworm) crée un
-    # profil NetworkManager nommé "preconfigured". Ni ce script ni le nettoyage
-    # de clonage (RUNBOOK §5.2) ne le ciblaient historiquement : il pouvait donc
-    # survivre dans l'image distribuée (fuite du SSID/clé de fabrication) ou faire
-    # camper la radio sur le mauvais réseau quand la GoPro est éteinte au boot.
-    # La borne ne se connecte QUE via wifi.txt -> on le supprime à chaque boot,
-    # quel que soit le mode de flashage de la carte.
+# Neutralise tout profil Wi-Fi injecté par Raspberry Pi Imager.
+# La customisation OS d'Imager (custom.toml / firstrun, Bookworm) crée un profil
+# NetworkManager nommé "preconfigured". Ni ce script ni le nettoyage de clonage
+# (RUNBOOK §5.2) ne le ciblaient historiquement : il pouvait survivre dans l'image
+# distribuée (fuite du SSID/clé de fabrication) ou faire camper la radio sur le
+# mauvais réseau quand la GoPro est éteinte. La borne ne se connecte QUE via
+# wifi.txt -> on le supprime à chaque boot, quel que soit le mode de flashage.
+purge_imager_profile() {
     if nmcli -t -f NAME connection show 2>/dev/null | grep -Fxq "$CONN_IMAGER"; then
         log "Suppression du profil Wi-Fi '$CONN_IMAGER' (injecté par Raspberry Pi Imager)."
         nmcli connection delete "$CONN_IMAGER" >/dev/null 2>&1 || true
     fi
+}
+
+# Applique un mot de passe SSH optionnel pour le compte 'pi' depuis la FAT32.
+# Pourquoi à chaque boot, et pas via `passwd` : avec l'overlay read-only, un
+# `passwd` en SSH part en RAM et revient au défaut au reboot. Réappliquer depuis
+# la FAT32 (hors overlay) à chaque démarrage est le SEUL moyen que le changement
+# persiste. Défaut (admin.txt absent/commenté) = mot de passe figé à la fabrication.
+apply_admin_password() {
+    [[ -f "$ADMIN_CONF" ]] || return 0
+    local line rk pw=""
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line//$'\r'/}"
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ "$line" == *"="* ]] || continue
+        rk="$(clean "${line%%=*}")"
+        [[ "${rk,,}" == "pi_password" ]] && pw="$(clean "${line#*=}")"
+    done < "$ADMIN_CONF"
+    [[ -z "$pw" ]] && return 0
+    if echo "pi:$pw" | chpasswd 2>/dev/null; then
+        log "Mot de passe du compte 'pi' appliqué depuis $ADMIN_CONF."
+    else
+        warn "Échec d'application du mot de passe 'pi' depuis $ADMIN_CONF."
+    fi
+}
+
+main() {
+    # Indépendant de wifi.txt -> toujours, AVANT la garde (s'applique même sans Wi-Fi).
+    purge_imager_profile
+    apply_admin_password
+
+    # Garde : pas de wifi.txt => rien à provisionner côté Wi-Fi, sortie OK.
+    if [[ ! -f "$CONF" ]]; then
+        log "Aucun fichier de configuration Wi-Fi ($CONF) : rien à provisionner."
+        exit 0
+    fi
+    log "Lecture de la configuration depuis $CONF"
 
     local gopro_ssid gopro_psk wifi2_ssid wifi2_psk
     gopro_ssid="$(read_key GOPRO_SSID)"
