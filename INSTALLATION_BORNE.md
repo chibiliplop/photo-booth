@@ -102,9 +102,10 @@ Les broches sont **configurables** sans recompiler : tout est dans le bloc
 Deux façons, selon votre rôle :
 
 **A. On vous l'a fournie / via les Releases GitHub (le plus simple).**
-Récupérez le fichier `photobooth-dist.img.xz` (page *Releases* du dépôt, ou clé
-USB fournie par le mainteneur). C'est tout — passez directement à l'**étape 3**
-(flashage).
+Récupérez le fichier `photobooth-dist.img.xz` depuis la
+[page *Releases* du dépôt](https://github.com/chibiliplop/photo-booth/releases/latest)
+(asset de la dernière version), ou sur la clé USB fournie par le mainteneur.
+C'est tout — passez directement à l'**étape 3** (flashage).
 
 **B. Vous êtes le mainteneur et devez la construire.**
 - En CI : *Actions* → *Build SD image* → *Run workflow* (ou pousser un tag `v*`),
