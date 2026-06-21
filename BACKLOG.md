@@ -61,21 +61,32 @@
 
 ### B. Devenir des photos (le plus gros trou produit)
 
-- [ ] **#11 — Aucune sauvegarde locale des photos** · 🟠 `M`  *(socle des suivants)*
-  *Pourquoi* : les octets GoPro sont affichés ~5 s puis jetés ; rien n'est écrit sur le Pi.
-  *Correctif* : `IPhotoRepository` (Save/List/Delete), écrire chaque JPEG horodaté ; `OutputPath` configurable.
-- [ ] **#12 — Aucune galerie / revue des photos** · 🔴 `M` *(dépend de #11)*
-  *Correctif* : `GalleryViewModel` + écran galerie (geste/bouton/QR), navigation Prev/Next.
-- [ ] **#13 — Aucun partage (QR, email, galerie web, USB)** · 🔴 `L` *(dépend de #11)*
-  *Correctif* : QR (ZXing.Net) → galerie web servie par un Kestrel local ; puis export USB ; puis email SMTP optionnel.
-- [ ] **#14 — Aucune impression / export fichier** · 🔴 `L` *(dépend de #11)*
-  *Correctif* : CUPS + `IPhotoService.PrintAsync` + bouton « Imprimer ».
+> **Principe architectural** : les photos restent sur la carte GoPro. Le Pi récupère les octets JPEG en mémoire (déjà fait pour l'affichage), les utilise pour afficher/imprimer/partager, puis les jette. Pas de copie locale obligatoire — avantage RGPD (les photos ne transitent pas sur le Pi) et pas de risque de saturation SD.
+
 - [ ] **#19 — Pas d'écran de confirmation/reprise après capture** · 🟠 `S`
-  *Correctif* : écran modal « Valider / Recommencer » (15–20 s) + nouvel état.
+  *Pourquoi* : les octets JPEG sont déjà en mémoire au moment de l'affichage.
+  *Correctif* : écran modal « Valider / Recommencer » (15–20 s) + nouvel état machine.
 - [ ] **#18 — Aucune personnalisation du tirage (cadre, logo, filigrane, montage)** · 🟠 `L`
-  *Correctif* : `IPrintTemplate` via SkiaSharp (overlay marge/texte/logo, montages 2×2…), modèles en config.
-- [ ] **#17 — Métadonnées photo absentes (événement, date, consentement RGPD)** · 🟠 `S` *(dépend de #11)*
-  *Correctif* : `PhotoMetadata` sérialisé en JSON à côté de chaque JPEG.
+  *Correctif* : `IPrintTemplate` via SkiaSharp (overlay marge/texte/logo, montages 2×2…) appliqué en mémoire sur le `byte[]` avant impression. Modèles en config.
+- [ ] **#14 — Aucune impression** · 🔴 `L`
+  *Pourquoi* : aucun chemin d'impression depuis la capture GoPro.
+  *Correctif* : abstraction `IPrinterAdapter` + bouton « Imprimer » ; le `byte[]` (éventuellement transformé par #18) est passé directement à l'adapter sans écriture disque.
+  *Adapters prévus* :
+  - `CupsPrinterAdapter` — imprimantes standard Linux (inkjet, laser, dye-sub via gutenprint)
+  - `DyeSubPrinterAdapter` — pilotes natifs DNP DS-RX1HS / Mitsubishi CP-D70DW / HiTi S420
+  - `FilePrinterAdapter` — export vers dossier (USB, test)
+  - `NoOpPrinterAdapter` — impression désactivée
+  `Printer.Type` configurable dans `photobooth.json`.
+- [ ] **#13 — Aucun partage (QR, email, galerie web, USB)** · 🔴 `L`
+  *Correctif* : QR (ZXing.Net) → galerie web servie par un Kestrel local (photo servie depuis la RAM le temps de la session) ; export USB (`FilePrinterAdapter` réutilisable) ; email SMTP optionnel.
+- [ ] **#12 — Aucune galerie / revue des photos** · 🟠 `M`
+  *Pourquoi* : sans stockage local, la galerie peut parcourir les fichiers via l'API HTTP GoPro (liste des médias disponibles sur la carte).
+  *Correctif* : `GalleryViewModel` + écran galerie (geste/bouton/QR), navigation Prev/Next via `ICaptureSource.ListMediaAsync`.
+- [ ] **#11 — Pas de sauvegarde locale des photos** · ⚪ `M`  *(optionnel — non bloquant)*
+  *Pourquoi* : utile si l'opérateur veut archiver sans récupérer la carte GoPro, ou servir une galerie persistante.
+  *Correctif* : `IPhotoRepository` (Save/List/Delete) activable via `Storage.Enabled`, écriture chaque JPEG horodaté dans `OutputPath`. Désactivé par défaut.
+- [ ] **#17 — Métadonnées photo absentes (événement, date, consentement RGPD)** · 🟠 `S` *(dépend de #11 si persistance voulue)*
+  *Correctif* : `PhotoMetadata` sérialisé en JSON à côté de chaque JPEG quand #11 est activé ; sinon émis en log uniquement.
 
 ### C. Caméra (couplage GoPro)
 
@@ -123,4 +134,4 @@
 
 ---
 
-*Prochain lot suggéré : **#11 sauvegarde locale** (débloque galerie/partage/impression), ou **#7 + #8** (continuité du câblage DIY).*
+*Prochain lot suggéré : **#19 + #14** (confirmation + impression, indépendants, haute valeur événementielle), ou **#7 + #8** (continuité du câblage DIY).*
