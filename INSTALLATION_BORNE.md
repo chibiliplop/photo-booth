@@ -15,13 +15,19 @@
 ## Vue d'ensemble (4 étapes)
 
 ```
-1. Obtenir l'image  ->  2. Flasher la carte SD  ->  3. Premier démarrage  ->  4. Configurer l'événement
-   (.img.xz)             (Raspberry Pi Imager)        (câblage + bandeau vert)   (fichiers sur la carte)
+1. Obtenir l'image  ->  2. Flasher la carte SD  ->  3. Configurer la carte     ->  4. Premier démarrage
+   (.img.xz)             (Raspberry Pi Imager)        (sur le PC, AVANT le boot)     (déjà prête : bandeau vert)
 ```
 
 Tout ce qui est « système » est déjà figé dans l'image. Vous n'installez **rien**
 à la main sur le Pi (pas de SSH, pas d'`apt`, pas de copie de fichiers) : l'image
 est *turnkey*.
+
+> **Le point clé** : la partition de configuration est **lisible sur votre PC**
+> dès que la carte est flashée. On règle donc le **Wi-Fi de la GoPro** et le thème
+> **avant** d'insérer la carte dans le Pi → la borne arrive **verte au tout premier
+> démarrage**, sans aucun terminal. (On peut aussi reconfigurer plus tard de la
+> même façon : sortir la carte, l'éditer sur le PC, la remettre.)
 
 ---
 
@@ -115,41 +121,76 @@ d'où l'importance de bien cliquer « Non ».
 
 ---
 
-## 4. Premier démarrage
+## 4. Configurer la carte AVANT le premier démarrage (recommandé)
 
-1. Insérez la carte dans le Pi.
+C'est tout l'intérêt de l'architecture : la **partition de configuration est
+lisible sur votre PC** dès le flashage. En la réglant **avant** d'insérer la carte
+dans le Pi, la borne démarre **déjà prête** (bandeau vert) au premier boot — aucun
+terminal, aucune manip sur le Pi.
+
+> Après l'écriture, Raspberry Pi Imager **éjecte** la carte. **Retirez-la puis
+> ré-insérez-la** dans le PC : une partition amovible apparaît, nommée **`bootfs`**.
+> L'autre partition (le système Linux) reste **invisible sous Windows** — c'est
+> normal. ⚠️ Si Windows propose de **formater** un disque inconnu, cliquez
+> **Annuler** (c'est la partition Linux, on n'y touche pas).
+
+Ouvrez le lecteur **`bootfs`**, puis le dossier **`photobooth`**. Vous y trouverez :
+
+| Fichier | À régler | Indispensable ? |
+|---|---|---|
+| **`wifi.txt`** | **SSID + mot de passe de la GoPro** | **Oui** — sinon la borne ne trouve pas la GoPro |
+| `photobooth.json` | Noms, année ; mode `http` (réel) ou `fake` (démo) | recommandé |
+| `fond.jpg` | Remplacer par votre image (garder ce nom exact) | optionnel |
+| `admin.txt` | **Avancé** : mot de passe SSH `pi` (voir §6) | non, l'opérateur n'y touche pas |
+| `LISEZ-MOI.txt` | notice (ne pas éditer) | — |
+
+### Le Wi-Fi de la GoPro (le point clé pour un boot vert)
+
+Ouvrez **`wifi.txt`** (Bloc-notes) et renseignez le réseau de **votre** GoPro,
+après le `=` :
+
+```
+GOPRO_SSID=GP12345678
+GOPRO_PASSWORD=le-mot-de-passe-de-ma-gopro
+```
+
+Au **premier démarrage**, le service de provisioning lit ce fichier et crée tout
+seul la connexion Wi-Fi (avec réessais infinis si la GoPro est rallumée plus
+tard). **Rien à taper sur le Pi.** Si vous laissez les valeurs d'exemple
+(`GP12345678`…), la borne démarre quand même mais reste en **bandeau orange**
+jusqu'à ce que vous corrigiez `wifi.txt`.
+
+> Réseau secondaire (box maison) facultatif : décommentez `WIFI_SSID` /
+> `WIFI_PASSWORD` dans `wifi.txt` (utile pour les tests avec Internet, ou pour
+> joindre la borne en SSH — voir §6).
+
+> **Règles** : on **modifie** les fichiers existants, on n'en **crée**/ne
+> **renomme** aucun. Le pas-à-pas complet (mode test sans GoPro, pièges
+> d'extensions cachées sous Windows) est dans
+> [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md) — **le** guide à donner à l'exploitant.
+
+Quand c'est fait, éjectez proprement la carte (« Retirer en toute sécurité »).
+
+---
+
+## 5. Premier démarrage
+
+1. Insérez la carte (déjà configurée) dans le Pi.
 2. Branchez dans l'**ordre** (détaillé dans le guide opérateur) :
    **GoPro allumée d'abord → écran HDMI → boutons → alimentation du Pi en
    DERNIER.**
 3. **Patientez ~1 à 2 minutes** au tout premier démarrage : l'image **agrandit
-   automatiquement** sa partition pour remplir la carte, applique le Wi-Fi de la
-   GoPro, puis lance le kiosk plein écran.
+   automatiquement** sa partition pour remplir la carte, applique le Wi-Fi lu dans
+   `wifi.txt`, puis lance le kiosk plein écran.
 4. **Bandeau VERT** = GoPro connectée, borne **prête**. Orange/rouge → dépannage
    du guide opérateur.
 
-Ce qui se passe tout seul, sans intervention : expansion de la carte, connexion
-Wi-Fi GoPro (réessais infinis), démarrage automatique du kiosk, relance auto en
-cas de crash. Vous n'avez **aucune** commande à taper.
+Tout est automatique : expansion de la carte, connexion Wi-Fi GoPro, démarrage du
+kiosk, relance auto en cas de crash. Vous n'avez **aucune** commande à taper.
 
----
-
-## 5. Configurer l'événement (sur la carte, depuis un PC)
-
-Une fois la carte flashée (ou ré-insérée dans le PC), la **partition visible sous
-Windows/Mac** contient un dossier **`photobooth`** avec les fichiers à éditer :
-
-| Fichier | À quoi ça sert |
-|---|---|
-| `photobooth.json` | Noms, année, fond, et mode (`http` réel / `fake` démo). |
-| `fond.jpg` | Image de fond (remplacez le fichier en gardant ce nom exact). |
-| `wifi.txt` | Nom (SSID) + mot de passe **de votre GoPro**. |
-| `LISEZ-MOI.txt` | Notice opérateur (rappels). |
-| `admin.txt` | **Avancé** : mot de passe SSH `pi` (voir §6). L'opérateur n'y touche pas. |
-
-> **Le pas-à-pas détaillé pour l'opérateur** (toujours *modifier*, jamais créer
-> ni renommer ; mode test sans GoPro ; pièges Windows) est dans
-> [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md). Donnez **ce** guide à la personne qui
-> exploite la borne.
+> Pour reconfigurer **plus tard** : éteindre (couper le courant), sortir la carte,
+> l'éditer sur le PC (comme au §4), la remettre. Les changements s'appliquent au
+> redémarrage suivant.
 
 ---
 
@@ -177,7 +218,7 @@ carte). SSH est réservé au mainteneur.
 
 - **Nouvelle image complète** (l'OS ou l'app a changé) : reflashez la carte
   (étape 3). ⚠️ Le reflashage **efface la carte** → les réglages d'événement
-  (noms, fond, Wi-Fi) repartent des modèles : reconfigurez via l'étape 5.
+  (noms, fond, Wi-Fi) repartent des modèles : reconfigurez via l'**étape 4**.
 - **Mise à jour de l'app seulement, sans reflasher** (opération mainteneur en
   SSH) : voir la section **« MISE À JOUR DE L'APP »** du
   [RUNBOOK](RUNBOOK_MAINTENEUR_CARTE_SD.md).
@@ -198,6 +239,7 @@ carte). SSH est réservé au mainteneur.
 ---
 
 > **En une phrase** : récupérez le `.img.xz`, flashez-le avec Raspberry Pi Imager
-> **en refusant la personnalisation OS**, branchez **GoPro → écran → boutons →
-> alim en dernier**, attendez le **bandeau vert**, puis réglez l'événement sur la
-> carte. Tout le reste est automatique.
+> **en refusant la personnalisation OS**, **réglez `wifi.txt` (Wi-Fi GoPro) et le
+> thème sur la carte depuis le PC**, puis insérez-la et branchez **GoPro → écran →
+> boutons → alim en dernier** : la borne arrive **verte** au premier démarrage.
+> Tout le reste est automatique.
