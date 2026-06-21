@@ -4,10 +4,11 @@
              x:Class="Photobooth.App.Views.MainView"
              x:DataType="vm:MainViewModel">
 
-  <!-- Video-mode animations. Deliberately Opacity-ONLY (Avalonia ships a built-in animator for it):
-       no per-frame bitmaps and no RenderTransform animation, so they stay smooth on the Raspberry Pi 3
-       software renderer and need no extra animator registration. They run only while their element is
-       visible. The clap is an opacity cross-fade between a fixed "open" arm and a fixed "shut" arm. -->
+  <!-- Continuous looping animations (clapperboard, REC blink, film flicker) use opacity-only because
+       Avalonia's built-in opacity animator needs no extra registration and is smooth on the Pi 3
+       software renderer.  The photo-card slide-in (TranslateTransform + RotateTransform) is a short
+       one-shot animation (~380 ms, triggered once every 5 s) driven by a DispatcherTimer in the
+       code-behind — brief enough to be smooth even without GPU acceleration. -->
   <UserControl.Styles>
 
     <!-- Clapper arm OPEN: shown most of the beat, then vanishes the instant it claps shut. -->
@@ -80,19 +81,22 @@
          1280x720) and scaled uniformly by the Viewbox to fit the real screen. Card sizes, fonts, rotations
          and margins below stay in design pixels — the Viewbox handles the scaling, so the booth looks the
          same on a 720p, 1080p or 4K HDMI screen (non-16:9 panels are letterboxed, centered). -->
-    <Viewbox Stretch="Uniform">
+    <Viewbox Stretch="Uniform" ClipToBounds="False">
       <Panel Width="{Binding DesignWidth, FallbackValue=1280}"
              Height="{Binding DesignHeight, FallbackValue=720}"
              Background="Transparent">
 
         <!-- Card 1 -->
-        <Border Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
+        <Border x:Name="Card0" Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 ZIndex="{Binding Cards[0].ZIndex}"
                 BoxShadow="-10 10 20 0 #66000000"
                 RenderTransformOrigin="50%,50%">
           <Border.RenderTransform>
-            <RotateTransform Angle="-10.848" />
+            <TransformGroup>
+              <TranslateTransform />
+              <RotateTransform Angle="-10.848" />
+            </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
             <Panel Margin="0,0,0,130" Background="Black">
@@ -111,13 +115,16 @@
         </Border>
 
         <!-- Card 2 -->
-        <Border Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
+        <Border x:Name="Card1" Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 ZIndex="{Binding Cards[1].ZIndex}"
                 BoxShadow="-10 10 20 0 #66000000"
                 RenderTransformOrigin="50%,50%">
           <Border.RenderTransform>
-            <RotateTransform Angle="7.0" />
+            <TransformGroup>
+              <TranslateTransform />
+              <RotateTransform Angle="7.0" />
+            </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
             <Panel Margin="0,0,0,130" Background="Black">
@@ -136,13 +143,16 @@
         </Border>
 
         <!-- Card 3 -->
-        <Border Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
+        <Border x:Name="Card2" Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 ZIndex="{Binding Cards[2].ZIndex}"
                 BoxShadow="-10 10 20 0 #66000000"
                 RenderTransformOrigin="50%,50%">
           <Border.RenderTransform>
-            <RotateTransform Angle="-20.461" />
+            <TransformGroup>
+              <TranslateTransform />
+              <RotateTransform Angle="-20.461" />
+            </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
             <Panel Margin="0,0,0,130" Background="Black">
