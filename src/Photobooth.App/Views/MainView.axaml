@@ -90,7 +90,7 @@
         <Border x:Name="Card0" Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 ZIndex="{Binding Cards[0].ZIndex}"
-                BoxShadow="-10 10 20 0 #66000000"
+                BoxShadow="{Binding Cards[0].CardShadow}"
                 RenderTransformOrigin="50%,50%">
           <Border.RenderTransform>
             <TransformGroup>
@@ -99,11 +99,15 @@
             </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
-            <Panel Margin="0,0,0,130" Background="Black">
+            <Panel Margin="0,0,0,130" Background="Black" ClipToBounds="True">
               <Image Source="{Binding Cards[0].Image}" IsVisible="{Binding Cards[0].IsImageVisible}" Stretch="Uniform" />
               <TextBlock Text="{Binding Cards[0].Message}" IsVisible="{Binding Cards[0].IsTextVisible}"
                          FontSize="72" Foreground="{Binding MessageBrush}" TextAlignment="Center"
                          TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <!-- #UI-2 : rideau blanc qui glisse vers le bas — révélation Polaroid -->
+              <Rectangle x:Name="RevealOverlay0" Fill="White" Opacity="0" IsHitTestVisible="False">
+                <Rectangle.RenderTransform><TranslateTransform /></Rectangle.RenderTransform>
+              </Rectangle>
             </Panel>
             <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="60"
                        Foreground="{Binding TitleBrush}" TextAlignment="Center"
@@ -118,7 +122,7 @@
         <Border x:Name="Card1" Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 ZIndex="{Binding Cards[1].ZIndex}"
-                BoxShadow="-10 10 20 0 #66000000"
+                BoxShadow="{Binding Cards[1].CardShadow}"
                 RenderTransformOrigin="50%,50%">
           <Border.RenderTransform>
             <TransformGroup>
@@ -127,11 +131,14 @@
             </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
-            <Panel Margin="0,0,0,130" Background="Black">
+            <Panel Margin="0,0,0,130" Background="Black" ClipToBounds="True">
               <Image Source="{Binding Cards[1].Image}" IsVisible="{Binding Cards[1].IsImageVisible}" Stretch="Uniform" />
               <TextBlock Text="{Binding Cards[1].Message}" IsVisible="{Binding Cards[1].IsTextVisible}"
                          FontSize="72" Foreground="{Binding MessageBrush}" TextAlignment="Center"
                          TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Rectangle x:Name="RevealOverlay1" Fill="White" Opacity="0" IsHitTestVisible="False">
+                <Rectangle.RenderTransform><TranslateTransform /></Rectangle.RenderTransform>
+              </Rectangle>
             </Panel>
             <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="60"
                        Foreground="{Binding TitleBrush}" TextAlignment="Center"
@@ -146,7 +153,7 @@
         <Border x:Name="Card2" Width="600" Height="610" CornerRadius="10" Background="{Binding CardBrush}"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 ZIndex="{Binding Cards[2].ZIndex}"
-                BoxShadow="-10 10 20 0 #66000000"
+                BoxShadow="{Binding Cards[2].CardShadow}"
                 RenderTransformOrigin="50%,50%">
           <Border.RenderTransform>
             <TransformGroup>
@@ -155,11 +162,14 @@
             </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
-            <Panel Margin="0,0,0,130" Background="Black">
+            <Panel Margin="0,0,0,130" Background="Black" ClipToBounds="True">
               <Image Source="{Binding Cards[2].Image}" IsVisible="{Binding Cards[2].IsImageVisible}" Stretch="Uniform" />
               <TextBlock Text="{Binding Cards[2].Message}" IsVisible="{Binding Cards[2].IsTextVisible}"
                          FontSize="72" Foreground="{Binding MessageBrush}" TextAlignment="Center"
                          TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Rectangle x:Name="RevealOverlay2" Fill="White" Opacity="0" IsHitTestVisible="False">
+                <Rectangle.RenderTransform><TranslateTransform /></Rectangle.RenderTransform>
+              </Rectangle>
             </Panel>
             <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="60"
                        Foreground="{Binding TitleBrush}" TextAlignment="Center"
@@ -169,6 +179,33 @@
                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" />
           </Grid>
         </Border>
+
+        <!-- #UI-3 : overlay idle — visible tant qu'aucune photo/message n'a été affiché -->
+        <Panel ZIndex="150" IsVisible="{Binding IsIdle}" IsHitTestVisible="False">
+          <Rectangle Fill="#CC000000" />
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="28">
+            <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="80"
+                       Foreground="White" TextAlignment="Center" HorizontalAlignment="Center" />
+            <TextBlock Text="Appuyez sur le bouton !" FontSize="50"
+                       Foreground="#D0D0D0" TextAlignment="Center" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Panel>
+
+        <!-- #UI-4 : compte à rebours photo plein-écran (3·2·1) avec pulse -->
+        <Panel ZIndex="210" IsVisible="{Binding IsPhotoCountdown}" IsHitTestVisible="False">
+          <Rectangle Fill="#CC000000" />
+          <TextBlock x:Name="PhotoCountdownLabel" Text="{Binding PhotoCountdownText}"
+                     FontSize="320" FontWeight="Bold" Foreground="White"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     TextAlignment="Center" RenderTransformOrigin="50%,50%">
+            <TextBlock.RenderTransform>
+              <ScaleTransform ScaleX="1.3" ScaleY="1.3" />
+            </TextBlock.RenderTransform>
+          </TextBlock>
+        </Panel>
+
+        <!-- #UI-1 : flash blanc au déclenchement (opacité 1→0 en 300 ms) -->
+        <Rectangle x:Name="FlashOverlay" ZIndex="240" Fill="White" Opacity="0" IsHitTestVisible="False" />
 
         <!-- ============================================================================
              VIDEO MODE — full-screen cinema takeover.

@@ -100,25 +100,20 @@
 
 ### D. Améliorations UX / animations
 
-- [ ] **#UI-1 — Pas de flash visuel au déclenchement** · 🟠 `S`
-  *Pourquoi* : sans retour visuel au moment du shutter, le déclenchement semble silencieux et les invités ne savent pas si la photo a été prise.
-  *Correctif* : rectangle blanc fullscreen (ZIndex élevé) qui monte à opacité 1 puis redescend en ~300 ms via une animation Avalonia, déclenché depuis `ShowPhoto` ou un nouvel événement `IPhotoDisplay.Flash()`. 10 lignes de XAML + 2 lignes de ViewModel.
+- [x] **#UI-1 — Flash visuel au déclenchement** · 🟠 `S`
+  `FlashOverlay` (Rectangle blanc ZIndex=240) : Opacity 1→0 en 300 ms (DispatcherTimer 16 ms), déclenché dans `AnimateCardIn` quand `IsImageVisible`. Code-behind uniquement.
 
-- [ ] **#UI-2 — Révélation Polaroid de la photo** · 🟡 `M`
-  *Pourquoi* : la photo apparaît instantanément après le slide-in ; un effet de "développement" renforcerait l'analogie Polaroid de l'interface cartes.
-  *Correctif* : animer un `ClipRect` ou un wipe vertical sur l'`Image` (haut → bas, 500–700 ms, EaseOutCubic) une fois la carte arrivée en position.
+- [x] **#UI-2 — Révélation Polaroid de la photo** · 🟡 `M`
+  `RevealOverlay0/1/2` (Rectangle blanc dans chaque photo Panel, `ClipToBounds="True"`) : `TranslateTransform.Y` 0→500 en 600 ms EaseOutCubic. Démarre à t=0.7 du slide-in (carte atterrie), hors GPU.
 
-- [ ] **#UI-3 — Écran idle vide (cartes sans contenu)** · 🟠 `S`
-  *Pourquoi* : au démarrage et entre les séquences, les 3 cartes sont vides ; l'écran semble cassé pour les invités qui arrivent.
-  *Correctif* : overlay centré (ZIndex modéré) visible tant qu'aucune photo n'a été prise, affichant le nom de l'événement + « Appuyez sur le bouton ! ». Disparaît au premier `ShowPhoto`.
+- [x] **#UI-3 — Écran idle vide (cartes sans contenu)** · 🟠 `S`
+  `IsIdle` (VM, défaut `true`) : overlay noir semi-transparent ZIndex=150 avec `Names` + « Appuyez sur le bouton ! ». Disparaît au premier `ShowMessage` ou `ShowPhoto`.
 
-- [ ] **#UI-4 — Compte à rebours photo peu visible** · 🟡 `S`
-  *Pourquoi* : le "3 / 2 / 1" s'affiche sur une carte de 600 px inclinée ; illisible à distance pour les invités debout devant la borne.
-  *Correctif* : overlay plein écran (réutiliser la structure du clapperboard vidéo) avec le chiffre centré + animation de pulse (scale 1.3 → 1.0 à chaque battement).
+- [x] **#UI-4 — Compte à rebours photo peu visible** · 🟡 `S`
+  `IsPhotoCountdown` + `PhotoCountdownText` (VM) : overlay plein écran ZIndex=210, chiffre FontSize=320. Déclenché par `ShowMessage("3"/"2"/"1")`. Pulse `ScaleTransform` 1.3→1.0 (EaseOutCubic 400 ms) à chaque battement via code-behind.
 
-- [ ] **#UI-5 — Pas de profondeur dynamique sur la carte active** · ⚪ `S`
-  *Pourquoi* : toutes les cartes ont la même ombre quelle que soit leur position dans la pile ; la carte du dessus ne "ressort" pas visuellement.
-  *Correctif* : quand `ZIndex = 100`, passer à une `BoxShadow` plus grande/sombre (ex. `-15 15 35 0 #88000000`) via binding sur `CardViewModel.ZIndex`. Pur XAML, zéro code.
+- [x] **#UI-5 — Profondeur dynamique sur la carte active** · ⚪ `S`
+  `CardViewModel.CardShadow` : `BoxShadows.Parse(...)` selon `ZIndex` (100 → ombre `-15 15 35 0 #88000000`, sinon `-10 10 20 0 #66000000`). Binding dans les 3 `Border.BoxShadow`.
 
 ### E. Affichage, langue, accessibilité
 

@@ -1,3 +1,4 @@
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 
 namespace Photobooth.App.ViewModels;
@@ -41,6 +42,15 @@ public sealed class CardViewModel : ViewModelBase
     public int ZIndex
     {
         get => _zIndex;
-        set => SetField(ref _zIndex, value);
+        set
+        {
+            if (SetField(ref _zIndex, value))
+                Raise(nameof(CardShadow));
+        }
     }
+
+    // #UI-5: la carte active (ZIndex=100) reçoit une ombre plus profonde pour "sortir" de la pile.
+    public BoxShadows CardShadow => _zIndex == 100
+        ? BoxShadows.Parse("-15 15 35 0 #88000000")
+        : BoxShadows.Parse("-10 10 20 0 #66000000");
 }

@@ -42,6 +42,9 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private IBrush _connectivityBrush = Brushes.Transparent;
     private DispatcherTimer? _statusHideTimer;
     private string? _diagnostic;
+    private bool _isIdle = true;
+    private bool _isPhotoCountdown;
+    private string _photoCountdownText = string.Empty;
 
     public CardViewModel[] Cards { get; } = { new(), new(), new() };
 
@@ -161,6 +164,27 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
 
     public bool HasDiagnostic => !string.IsNullOrEmpty(_diagnostic);
 
+    /// <summary>#UI-3 — Overlay "Appuyez sur le bouton !" visible jusqu'au premier ShowMessage/ShowPhoto.</summary>
+    public bool IsIdle
+    {
+        get => _isIdle;
+        private set => SetField(ref _isIdle, value);
+    }
+
+    /// <summary>#UI-4 — Compte à rebours photo plein-écran (3·2·1), déclenché par ShowMessage sur un chiffre.</summary>
+    public bool IsPhotoCountdown
+    {
+        get => _isPhotoCountdown;
+        private set => SetField(ref _isPhotoCountdown, value);
+    }
+
+    /// <summary>Chiffre affiché dans l'overlay photo countdown.</summary>
+    public string PhotoCountdownText
+    {
+        get => _photoCountdownText;
+        private set => SetField(ref _photoCountdownText, value);
+    }
+
     /// <summary>Show (or clear) the persistent startup diagnostic banner. Called by the App on the UI thread.</summary>
     public void ShowDiagnostic(string? message) =>
         Dispatcher.UIThread.Post(() => Diagnostic = message);
@@ -186,25 +210,43 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     // ---- IPhotoDisplay (always called off the UI thread) ----
 
     public void ShowMessage(string text) =>
-        Dispatcher.UIThread.Post(() => Advance(card =>
+        Dispatcher.UIThread.Post(() =>
         {
-            card.Message = text;
-            card.IsTextVisible = true;
-            card.IsImageVisible = false;
-        }));
+            ClearIdle();
+            if (text is "3" or "2" or "1")
+            {
+                PhotoCountdownText = text;
+                IsPhotoCountdown = true;
+            }
+            else
+            {
+                IsPhotoCountdown = false;
+            }
+            Advance(card =>
+            {
+                card.Message = text;
+                card.IsTextVisible = true;
+                card.IsImageVisible = false;
+            });
+        });
 
     public void ShowPhoto(byte[] imageData)
     {
         var bitmap = TryDecode(imageData);
         if (bitmap is null) return;
-        Dispatcher.UIThread.Post(() => Advance(card =>
+        Dispatcher.UIThread.Post(() =>
         {
-            var previous = card.Image;
-            card.Image = bitmap;
-            card.IsImageVisible = true;
-            card.IsTextVisible = false;
-            previous?.Dispose(); // release unmanaged Skia memory promptly (1 GB Pi)
-        }));
+            ClearIdle();
+            IsPhotoCountdown = false;
+            Advance(card =>
+            {
+                var previous = card.Image;
+                card.Image = bitmap;
+                card.IsImageVisible = true;
+                card.IsTextVisible = false;
+                previous?.Dispose(); // release unmanaged Skia memory promptly (1 GB Pi)
+            });
+        });
     }
 
     public void ShowVideoCountdown(int seconds) =>
@@ -274,6 +316,8 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         });
 
     // ---- internals ----
+
+    private void ClearIdle() { if (_isIdle) IsIdle = false; }
 
     private void EnsureHideTimer()
     {
