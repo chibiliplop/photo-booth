@@ -330,7 +330,6 @@
                        TextAlignment="Center" HorizontalAlignment="Center" />
             <TextBlock Text="Appuyez pour imprimer"
                        Foreground="{Binding TitleBrush}"
-                       FontFamily="{Binding TitleFont}"
                        FontSize="30"
                        TextAlignment="Center" HorizontalAlignment="Center" />
           </StackPanel>

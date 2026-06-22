@@ -150,7 +150,14 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
                 if (State is BoothState.Idle or BoothState.Degraded)
                 {
                     if (ShouldPhotoButtonPrint())
+                    {
                         await PrintLastPhotoAsync(lifetime);
+                        if (!_printerOpt.AllowMultiplePrints)
+                        {
+                            _lastCapturedPhoto = null; // ferme la fenêtre d'impression
+                            _display.SetPrintAvailable(false);
+                        }
+                    }
                     else
                         await RunPhotoSequenceAsync(lifetime);
                 }

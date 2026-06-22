@@ -36,6 +36,12 @@ public sealed class PrinterOptions
     /// <summary>Destination folder for Type="file".</summary>
     public string OutputPath { get; set; } = "printed";
 
+    /// <summary>
+    /// When TriggerMode="photo-button-window": false (default) closes the window after the first print;
+    /// true keeps the window open so the photo can be printed multiple times.
+    /// </summary>
+    public bool AllowMultiplePrints { get; set; } = false;
+
     public bool IsDisabled =>
         string.Equals(Type, "disabled", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Type, "noop", StringComparison.OrdinalIgnoreCase) ||

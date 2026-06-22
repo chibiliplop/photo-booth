@@ -94,6 +94,10 @@
 
     "Copies": 1,
     "Media": "Postcard",
-    "Options": "fit-to-page=true"
+    "Options": "fit-to-page=true",
+
+    // false = une seule impression par photo, puis retour au mode photo. (defaut)
+    // true  = peut reimprimer la meme photo plusieurs fois pendant la fenetre.
+    "AllowMultiplePrints": false
   }
 }
