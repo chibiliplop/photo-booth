@@ -145,6 +145,118 @@
 
 ---
 
+## 🔲 Compléments d'audit UX/UI + fonctionnel (2026-06-22)
+
+> Seconde passe après relecture du programme Avalonia (`src/Photobooth.App`), du workflow (`PhotoboothWorkflow`) et des fichiers de configuration. Ces points complètent le backlog initial : ils ciblent surtout l'exploitation réelle par un opérateur non-tech, la borne DIY et la perception invité.
+
+### G. Parcours opérateur / jour J
+
+- [ ] **#32 — Pas d'écran « prêt événement » avant ouverture aux invités** · 🟠 `M`
+  *Pourquoi* : l'opérateur voit seulement des bandeaux GoPro/GPIO. Il n'a pas de checklist claire confirmant que l'écran, la GoPro, les boutons, la lumière, la config et l'espace disque sont OK avant de laisser les invités utiliser la borne.
+  *Correctif* : écran de pré-vol au boot ou via appui long : GoPro OK, mode réel/fake, boutons détectés, lumière activée/désactivée, fond chargé, résolution, espace disque, date/heure. Bouton/timeout « Démarrer la soirée ».
+
+- [ ] **#33 — Pas de mode test matériel autonome** · 🟠 `M`
+  *Pourquoi* : le mode fake teste l'UI, mais pas explicitement le câblage. Un bricoleur ne sait pas si PHOTO, VIDEO et lumière sont correctement branchés avant l'événement.
+  *Correctif* : option `--test-hardware` ou geste au démarrage : « appuyez sur PHOTO », « appuyez sur VIDEO », « test lumière 2 s », résultat visuel vert/rouge.
+
+- [ ] **#34 — Aucun résumé opérateur lisible depuis la partition boot** · 🟠 `S`
+  *Pourquoi* : en cas de problème sur site, les logs Serilog sont dans le dossier applicatif, pas dans un fichier simple que l'opérateur peut lire sous Windows/Mac en remettant la SD dans un ordinateur.
+  *Correctif* : écrire `/boot/firmware/photobooth/etat-borne.txt` à chaque boot : version, config chargée, mode GoPro, dernier diagnostic, date/heure, dernière erreur courte, compteurs de session.
+
+- [ ] **#35 — Pas de sauvegarde/restauration de la dernière bonne config** · 🟠 `S`
+  *Pourquoi* : #31 affichera une erreur si `photobooth.json` est cassé, mais l'opérateur non-tech n'a pas forcément de chemin simple pour revenir à une config fonctionnelle.
+  *Correctif* : à chaque config valide, copier `photobooth.json` vers `photobooth.last-good.json`. En cas de config invalide, afficher l'erreur et proposer/indiquer de restaurer ce fichier.
+
+- [ ] **#36 — Pas de mode « fin de soirée »** · ⚪ `S`
+  *Pourquoi* : l'opérateur débranche directement. C'est simple, mais il n'a aucun récapitulatif ni confirmation que la session est terminée.
+  *Correctif* : geste opérateur (appui long / raccourci clavier) affichant « Événement terminé », nombre de photos/vidéos, dernier statut GoPro, rappel « éteindre la GoPro puis débrancher ».
+
+### H. Session, statistiques et maintenance terrain
+
+- [ ] **#37 — Pas de notion de session événement** · 🟡 `M`
+  *Pourquoi* : `Theme.Names`/`Year` personnalisent l'écran, mais il n'existe pas d'identifiant de session utilisable pour logs, exports, galerie, impression ou support.
+  *Correctif* : ajouter `Event.Name`, `Event.Date`, `Event.SessionId` (auto si absent), heure de début/fin, compteurs `PhotosTaken`/`VideosTaken`.
+
+- [ ] **#38 — Aucun compteur discret pour l'opérateur** · ⚪ `S`
+  *Pourquoi* : pendant l'événement, l'opérateur ne sait pas combien de photos/vidéos ont été prises, ni depuis quand la GoPro est connectée.
+  *Correctif* : panneau caché par appui long / touche maintenance : compteurs, uptime, dernière erreur, dernier fichier GoPro, état du mode fake/http, espace disque.
+
+- [ ] **#39 — Pas de health-check espace disque / logs au niveau UI** · 🟠 `S`
+  *Pourquoi* : #28 mentionne la saturation SD, mais l'UI ne prévient pas l'opérateur si les logs ou une future sauvegarde locale remplissent la carte.
+  *Correctif* : vérifier l'espace libre au boot et périodiquement ; bandeau rouge si sous seuil configurable (`Storage.MinFreeMb`, défaut 250 Mo).
+
+- [ ] **#40 — Pas d'indication de version build à l'écran** · ⚪ `S`
+  *Pourquoi* : en support à distance, impossible de savoir quelle image/app tourne sans SSH.
+  *Correctif* : afficher version courte dans le panneau maintenance et l'écrire dans `etat-borne.txt`.
+
+### I. Feedback invité / UX de prise de vue
+
+- [ ] **#UX-6 — Appuis ignorés sans feedback pendant une séquence** · 🟡 `S`
+  *Pourquoi* : le workflow draine correctement les doubles appuis, mais l'invité qui rappuie pendant une capture/vidéo ne voit rien. Il peut croire que le bouton ne marche pas.
+  *Correctif* : quand un appui est refusé car `Capturing`/`Recording`, afficher brièvement « Patientez... » ou faire pulser le contour/flash UI sans lancer de nouvelle action.
+
+- [ ] **#UX-7 — Pas de retour audio optionnel** · 🟡 `M`
+  *Pourquoi* : en événement, les invités ne regardent pas toujours l'écran. Un bip de décompte ou un son shutter rend la borne plus compréhensible.
+  *Correctif* : `Sound.Enabled`, `CountdownBeep`, `ShutterSound`, `ErrorSound`; off par défaut ou volume configurable. Jouer les sons uniquement côté App, pas dans Core.
+
+- [ ] **#UX-8 — Pas de message clair « ne bougez plus / traitement en cours » après le shutter** · 🟡 `S`
+  *Pourquoi* : après `Souriez`, la GoPro peut mettre plusieurs secondes à écrire le fichier. Le message « La photo arrive... » existe, mais il ne distingue pas le moment où il faut encore rester immobile du moment où la photo est en traitement.
+  *Correctif* : états visuels séparés : « Ne bougez plus » pendant lumière/shutter, puis « Préparation de la photo » pendant attente média/téléchargement.
+
+- [ ] **#UX-9 — Aucune instruction persistante en mode idle après plusieurs photos** · 🟡 `S`
+  *Pourquoi* : #UI-3 couvre l'écran vide au démarrage, mais une fois le slideshow lancé, rien n'indique clairement aux nouveaux invités quel bouton utiliser.
+  *Correctif* : call-to-action discret mais permanent en bas d'écran (configurable) : « Appuyez sur le bouton PHOTO » / « Appuyez sur VIDEO pour un message », masqué pendant les séquences.
+
+- [ ] **#UX-10 — Pas de mode accessibilité / haute lisibilité** · 🟡 `M`
+  *Pourquoi* : l'UI actuelle est stylée, mais un écran petit, bas ou éloigné rend les textes difficiles à lire.
+  *Correctif* : `Theme.HighVisibility=true` : compte à rebours plein écran, contraste renforcé, statuts plus gros, call-to-action plus lisible, animations réduites.
+
+### J. Fonctionnel photo / impression / partage
+
+- [ ] **#41 — Bouton impression partiellement présent mais non fonctionnel** · 🟠 `S`
+  *Pourquoi* : `HardwareOptions` contient `PrintButtonPin`/`PrintButtonEnabled` et `GpioButtonInput` expose `PrintPressed`, mais `IButtonInput` ne l'expose pas et `App.axaml.cs` ne route aucune commande impression. Risque de confusion : la config suggère une fonction qui n'existe pas.
+  *Correctif* : soit retirer les options jusqu'à #14, soit ajouter proprement `PrintPressed` à `IButtonInput`, `BoothCommand.PrintRequested`, routage App, fake clavier (`P`) et no-op explicite tant que l'adapter imprimante n'existe pas.
+
+- [ ] **#42 — Pas de cache mémoire pour fluidifier le slideshow GoPro** · ⚪ `M`
+  *Pourquoi* : le slideshow liste/télécharge depuis le Wi-Fi GoPro à chaque tick. Sur un signal faible, l'écran peut sembler inerte ou irrégulier.
+  *Correctif* : précharger 2–3 JPEG en RAM pendant `Idle`, remplacer progressivement le cache, ne jamais écrire disque par défaut.
+
+- [ ] **#43 — Pas de limite ou filtre de galerie/slideshow par session** · 🟡 `M`
+  *Pourquoi* : la GoPro peut contenir d'anciennes photos. Le slideshow choisit aujourd'hui parmi les fichiers non vidéo disponibles, ce qui peut afficher des images d'un événement précédent.
+  *Correctif* : option `Slideshow.Source=all|session|recent`, filtrage par date GoPro si disponible ou par snapshot au démarrage.
+
+- [ ] **#44 — Pas de protection produit contre le mode fake oublié le jour J** · 🔴 `S`
+  *Pourquoi* : le guide demande de repasser `"Mode": "http"`, mais si l'opérateur oublie, la borne paraît fonctionner tout en ne prenant aucune vraie photo.
+  *Correctif* : en `Gopro.Mode=fake`, afficher un bandeau persistant « MODE TEST - aucune vraie photo » et/ou exiger une confirmation au boot si `Event.Production=true`.
+
+### K. Thème et personnalisation
+
+- [ ] **#45 — Personnalisation thème trop limitée pour des événements variés** · 🟡 `M`
+  *Pourquoi* : `Theme` couvre noms, année, fond, couleurs et police, mais pas les textes d'appel à action, logo, position du logo, style de carte, ni variantes mariage/anniversaire/entreprise.
+  *Correctif* : ajouter `Theme.CallToAction`, `Theme.LogoImage`, `Theme.LogoPlacement`, `Theme.Preset`, `Theme.ShowYear`, avec valeurs par défaut compatibles.
+
+- [ ] **#46 — Image de fond invalide silencieuse pour l'opérateur** · 🟡 `S`
+  *Pourquoi* : si `BackgroundImage` pointe vers un fichier absent, l'app logge et retombe sur le fond par défaut. C'est robuste, mais l'opérateur ne comprend pas pourquoi son fond ne s'affiche pas.
+  *Correctif* : diagnostic non bloquant à l'écran et dans `etat-borne.txt` : « fond.jpg introuvable, fond par défaut utilisé ».
+
+- [ ] **#47 — Pas de prévisualisation de configuration hors borne** · ⚪ `M`
+  *Pourquoi* : l'opérateur modifie la SD à la maison mais ne peut pas vérifier facilement le rendu avant de redémarrer la borne.
+  *Correctif* : outil `--preview-config <dir>` ou script qui rend un PNG de l'écran idle à partir du dossier boot-config.
+
+### L. Sécurité d'exploitation / anti-erreur
+
+- [ ] **#48 — Pas de verrouillage des raccourcis clavier en production** · ⚪ `S`
+  *Pourquoi* : en mode desktop/dev, Espace/Entrée/V déclenchent les actions. Sur une borne avec clavier branché ou accessible, un invité peut lancer des actions non prévues.
+  *Correctif* : `Operator.KeyboardShortcutsEnabled`, désactivable en production sauf combinaison maintenance.
+
+- [ ] **#49 — Pas de confirmation avant actions opérateur sensibles** · 🟡 `S`
+  *Pourquoi* : les futurs gestes `shutdown`, `reload config`, `test hardware`, `end session` doivent éviter les déclenchements accidentels pendant une soirée.
+  *Correctif* : confirmation plein écran 3 s / appui long maintenu, jamais sur appui court.
+
+- [ ] **#50 — Pas de stratégie visible si l'heure système est fausse** · 🟡 `S`
+  *Pourquoi* : la borne peut être hors ligne sur le Wi-Fi GoPro. Une mauvaise date casse les logs, futures sessions, filtres slideshow et exports.
+  *Correctif* : afficher un avertissement si l'heure semble aberrante (avant 2024, par exemple), permettre `Event.Date` comme repli pour nommage/session.
+
 ## Dette technique connexe (hors audit)
 
 - [ ] Sur échec d'init GPIO, le `GpioController` partiellement ouvert n'est pas disposé (fuite mineure, pré-existante) — `HardwareBundle.Create`.

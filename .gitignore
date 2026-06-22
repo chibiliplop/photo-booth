@@ -23,3 +23,6 @@ packages/
 
 # Claude Code (état local, lock de tâches planifiées)
 .claude/
+
+# Cache APT généré par image-builder (binaires lourds, régénérés automatiquement)
+image-builder/aptcache/
