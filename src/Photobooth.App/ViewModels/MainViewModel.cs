@@ -348,8 +348,14 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     {
         _currentFrame = (_currentFrame + 1) % Cards.Length;
         apply(Cards[_currentFrame]);
-        for (var i = 0; i < Cards.Length; i++)
-            Cards[i].ZIndex = i == _currentFrame ? 100 : 1;
+        // 100 = devant (nouvelle carte), 50 = milieu (précédente), 1 = derrière (plus ancienne).
+        // La carte qui vient de passer devant ne disparaît plus instantanément derrière les deux autres :
+        // elle reste au milieu jusqu'à la prochaine rotation.
+        var prev   = (_currentFrame + Cards.Length - 1) % Cards.Length;
+        var oldest = (_currentFrame + 1)                % Cards.Length;
+        Cards[_currentFrame].ZIndex = 100;
+        Cards[prev].ZIndex          = 50;
+        Cards[oldest].ZIndex        = 1;
     }
 
     private Bitmap? TryDecode(byte[] data)
