@@ -237,6 +237,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
                 _goproGate.Release();
             }
 
+            _display.Flash();
             _display.ShowPhoto(photo);
             await Task.Delay(_timings.PhotoDisplayMs, ct);
             SetState(BoothState.Idle);

@@ -99,15 +99,11 @@
             </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
-            <Panel Margin="0,0,0,130" Background="Black" ClipToBounds="True">
+            <Panel Margin="0,0,0,130" Background="Black">
               <Image Source="{Binding Cards[0].Image}" IsVisible="{Binding Cards[0].IsImageVisible}" Stretch="Uniform" />
               <TextBlock Text="{Binding Cards[0].Message}" IsVisible="{Binding Cards[0].IsTextVisible}"
                          FontSize="72" Foreground="{Binding MessageBrush}" TextAlignment="Center"
                          TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <!-- #UI-2 : rideau blanc qui glisse vers le bas — révélation Polaroid -->
-              <Rectangle x:Name="RevealOverlay0" Fill="White" Opacity="0" IsHitTestVisible="False">
-                <Rectangle.RenderTransform><TranslateTransform /></Rectangle.RenderTransform>
-              </Rectangle>
             </Panel>
             <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="60"
                        Foreground="{Binding TitleBrush}" TextAlignment="Center"
@@ -131,14 +127,11 @@
             </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
-            <Panel Margin="0,0,0,130" Background="Black" ClipToBounds="True">
+            <Panel Margin="0,0,0,130" Background="Black">
               <Image Source="{Binding Cards[1].Image}" IsVisible="{Binding Cards[1].IsImageVisible}" Stretch="Uniform" />
               <TextBlock Text="{Binding Cards[1].Message}" IsVisible="{Binding Cards[1].IsTextVisible}"
                          FontSize="72" Foreground="{Binding MessageBrush}" TextAlignment="Center"
                          TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <Rectangle x:Name="RevealOverlay1" Fill="White" Opacity="0" IsHitTestVisible="False">
-                <Rectangle.RenderTransform><TranslateTransform /></Rectangle.RenderTransform>
-              </Rectangle>
             </Panel>
             <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="60"
                        Foreground="{Binding TitleBrush}" TextAlignment="Center"
@@ -162,14 +155,11 @@
             </TransformGroup>
           </Border.RenderTransform>
           <Grid Margin="20">
-            <Panel Margin="0,0,0,130" Background="Black" ClipToBounds="True">
+            <Panel Margin="0,0,0,130" Background="Black">
               <Image Source="{Binding Cards[2].Image}" IsVisible="{Binding Cards[2].IsImageVisible}" Stretch="Uniform" />
               <TextBlock Text="{Binding Cards[2].Message}" IsVisible="{Binding Cards[2].IsTextVisible}"
                          FontSize="72" Foreground="{Binding MessageBrush}" TextAlignment="Center"
                          TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <Rectangle x:Name="RevealOverlay2" Fill="White" Opacity="0" IsHitTestVisible="False">
-                <Rectangle.RenderTransform><TranslateTransform /></Rectangle.RenderTransform>
-              </Rectangle>
             </Panel>
             <TextBlock Text="{Binding Names}" FontFamily="{Binding TitleFont}" FontSize="60"
                        Foreground="{Binding TitleBrush}" TextAlignment="Center"

@@ -209,6 +209,12 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
 
     // ---- IPhotoDisplay (always called off the UI thread) ----
 
+    /// <summary>Fired on the UI thread when the shutter fires — code-behind wires the white flash to this.</summary>
+    public event Action? FlashFired;
+
+    public void Flash() =>
+        Dispatcher.UIThread.Post(() => FlashFired?.Invoke());
+
     public void ShowMessage(string text) =>
         Dispatcher.UIThread.Post(() =>
         {

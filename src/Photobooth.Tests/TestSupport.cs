@@ -32,6 +32,7 @@ internal sealed class RecordingDisplay : IPhotoDisplay
 
     public void ShowMessage(string text) { lock (_lock) _messages.Add(text); }
     public void ShowPhoto(byte[] imageData) => Interlocked.Increment(ref _photoCount);
+    public void Flash() { } // no-op in tests
     public void ShowVideoCountdown(int seconds) { lock (_lock) _videoCountdowns.Add(seconds); }
     public void SetRecording(bool recording, int totalSeconds = 0)
     {

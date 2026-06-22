@@ -26,6 +26,12 @@ public interface IPhotoDisplay
     void ShowPhoto(byte[] imageData);
 
     /// <summary>
+    /// Trigger a brief white-flash shutter feedback. Called once per capture, just before
+    /// <see cref="ShowPhoto"/>. The slideshow never calls this — flash is a capture-only event.
+    /// </summary>
+    void Flash();
+
+    /// <summary>
     /// Cinematic count-in before filming begins: shows the clapperboard with <paramref name="seconds"/>
     /// on the slate (3, 2, 1). Called once per beat by the workflow; recording has NOT started yet.
     /// </summary>
