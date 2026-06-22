@@ -181,19 +181,6 @@
           </StackPanel>
         </Panel>
 
-        <!-- #UI-4 : compte à rebours photo plein-écran (3·2·1) avec pulse -->
-        <Panel ZIndex="210" IsVisible="{Binding IsPhotoCountdown}" IsHitTestVisible="False">
-          <Rectangle Fill="#CC000000" />
-          <TextBlock x:Name="PhotoCountdownLabel" Text="{Binding PhotoCountdownText}"
-                     FontSize="320" FontWeight="Bold" Foreground="White"
-                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                     TextAlignment="Center" RenderTransformOrigin="50%,50%">
-            <TextBlock.RenderTransform>
-              <ScaleTransform ScaleX="1.3" ScaleY="1.3" />
-            </TextBlock.RenderTransform>
-          </TextBlock>
-        </Panel>
-
         <!-- #UI-1 : flash blanc au déclenchement (opacité 1→0 en 300 ms) -->
         <Rectangle x:Name="FlashOverlay" ZIndex="240" Fill="White" Opacity="0" IsHitTestVisible="False" />
 

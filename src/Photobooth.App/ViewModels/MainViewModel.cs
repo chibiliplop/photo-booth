@@ -43,8 +43,6 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private DispatcherTimer? _statusHideTimer;
     private string? _diagnostic;
     private bool _isIdle = true;
-    private bool _isPhotoCountdown;
-    private string _photoCountdownText = string.Empty;
 
     public CardViewModel[] Cards { get; } = { new(), new(), new() };
 
@@ -171,19 +169,6 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         private set => SetField(ref _isIdle, value);
     }
 
-    /// <summary>#UI-4 — Compte à rebours photo plein-écran (3·2·1), déclenché par ShowMessage sur un chiffre.</summary>
-    public bool IsPhotoCountdown
-    {
-        get => _isPhotoCountdown;
-        private set => SetField(ref _isPhotoCountdown, value);
-    }
-
-    /// <summary>Chiffre affiché dans l'overlay photo countdown.</summary>
-    public string PhotoCountdownText
-    {
-        get => _photoCountdownText;
-        private set => SetField(ref _photoCountdownText, value);
-    }
 
     /// <summary>Show (or clear) the persistent startup diagnostic banner. Called by the App on the UI thread.</summary>
     public void ShowDiagnostic(string? message) =>
@@ -219,15 +204,6 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         Dispatcher.UIThread.Post(() =>
         {
             ClearIdle();
-            if (text is "3" or "2" or "1")
-            {
-                PhotoCountdownText = text;
-                IsPhotoCountdown = true;
-            }
-            else
-            {
-                IsPhotoCountdown = false;
-            }
             Advance(card =>
             {
                 card.Message = text;
@@ -243,7 +219,6 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         Dispatcher.UIThread.Post(() =>
         {
             ClearIdle();
-            IsPhotoCountdown = false;
             Advance(card =>
             {
                 var previous = card.Image;

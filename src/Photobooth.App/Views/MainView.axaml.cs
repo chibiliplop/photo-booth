@@ -16,7 +16,6 @@ public partial class MainView : UserControl
 
     private readonly DispatcherTimer?[] _animTimers = new DispatcherTimer?[3];
     private DispatcherTimer? _flashTimer;
-    private DispatcherTimer? _pulseTimer;
 
     public MainView()
     {
@@ -46,12 +45,6 @@ public partial class MainView : UserControl
             };
         }
 
-        // #UI-4 : pulse à chaque changement de chiffre du countdown photo
-        vm.PropertyChanged += (_, args) =>
-        {
-            if (args.PropertyName == nameof(MainViewModel.PhotoCountdownText))
-                PulseCountdown();
-        };
     }
 
     // ---- #UI-1 : flash blanc ------------------------------------------------
@@ -78,37 +71,6 @@ public partial class MainView : UserControl
             }
         };
         _flashTimer = timer;
-        timer.Start();
-    }
-
-    // ---- #UI-4 : pulse chiffre countdown ------------------------------------
-
-    private void PulseCountdown()
-    {
-        _pulseTimer?.Stop();
-        _pulseTimer = null;
-
-        var scale = (ScaleTransform)PhotoCountdownLabel.RenderTransform!;
-        scale.ScaleX = 1.3;
-        scale.ScaleY = 1.3;
-
-        var startTime = DateTime.UtcNow;
-        const double pulseDurationMs = 400.0;
-
-        var timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(16) };
-        timer.Tick += (_, _) =>
-        {
-            var t = Math.Min((DateTime.UtcNow - startTime).TotalMilliseconds / pulseDurationMs, 1.0);
-            var s = 1.3 - 0.3 * EaseOutCubic(t); // 1.3 → 1.0
-            scale.ScaleX = s;
-            scale.ScaleY = s;
-            if (t >= 1.0)
-            {
-                timer.Stop();
-                _pulseTimer = null;
-            }
-        };
-        _pulseTimer = timer;
         timer.Start();
     }
 
