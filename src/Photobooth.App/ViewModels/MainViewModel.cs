@@ -185,12 +185,10 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         get => _printCountdown;
         private set
         {
-            if (SetField(ref _printCountdown, value))
-                Raise(nameof(PrintCountdownText));
+            SetField(ref _printCountdown, value);
         }
     }
 
-    public string PrintCountdownText => $"Photo imprimable  {_printCountdown}s";
 
     /// <summary>Show (or clear) the persistent startup diagnostic banner. Called by the App on the UI thread.</summary>
     public void ShowDiagnostic(string? message) =>
@@ -343,7 +341,11 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
             _printCountdownTimer.Tick += (_, _) =>
             {
                 if (PrintCountdown > 0) PrintCountdown--;
-                if (PrintCountdown <= 0) _printCountdownTimer!.Stop();
+                if (PrintCountdown <= 0)
+                {
+                    _printCountdownTimer!.Stop();
+                    IsPrintAvailable = false;
+                }
             };
         }
         _printCountdownTimer.Stop();

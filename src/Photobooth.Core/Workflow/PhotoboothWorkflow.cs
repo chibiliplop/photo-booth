@@ -556,6 +556,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
 
             // Run while Idle or Degraded (a successful fetch while Degraded is how we auto-recover).
             if (State is not (BoothState.Idle or BoothState.Degraded)) continue;
+            if (ShouldPhotoButtonPrint()) continue; // keep the last photo visible during the print window
             if (!_goproGate.Wait(0)) continue; // capture is using the camera — skip this tick
             try
             {

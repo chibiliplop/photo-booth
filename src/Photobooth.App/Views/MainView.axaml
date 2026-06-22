@@ -35,6 +35,17 @@
       </Style.Animations>
     </Style>
 
+    <!-- Print-available pill: slow pulse to invite action without being aggressive. -->
+    <Style Selector="Border.printPill">
+      <Style.Animations>
+        <Animation Duration="0:0:1.8" IterationCount="INFINITE">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1.0" /></KeyFrame>
+          <KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.72" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1.0" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
     <!-- Blinking red REC dot. -->
     <Style Selector="Ellipse.recDot">
       <Style.Animations>
@@ -307,11 +318,22 @@
                  IsVisible="{Binding HasConnectivity}"
                  Fill="{Binding ConnectivityBrush}" Stroke="#55FFFFFF" StrokeThickness="2" />
 
-        <Border ZIndex="210"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24"
+        <Border Classes="printPill" ZIndex="210"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,36"
                 IsVisible="{Binding IsPrintAvailable}"
-                Background="#CC000000" CornerRadius="6" Padding="14,8">
-          <TextBlock Text="{Binding PrintCountdownText}" Foreground="White" FontSize="20" FontWeight="Bold" />
+                Background="{Binding CardBrush}" CornerRadius="16" Padding="40,18"
+                BoxShadow="0 6 32 0 #99000000">
+          <StackPanel Spacing="0" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding PrintCountdown}"
+                       Foreground="{Binding TitleBrush}"
+                       FontSize="100" FontWeight="Bold" LineHeight="100"
+                       TextAlignment="Center" HorizontalAlignment="Center" />
+            <TextBlock Text="Appuyez pour imprimer"
+                       Foreground="{Binding TitleBrush}"
+                       FontFamily="{Binding TitleFont}"
+                       FontSize="30"
+                       TextAlignment="Center" HorizontalAlignment="Center" />
+          </StackPanel>
         </Border>
 
         <!-- Operator status banner (couleur selon l'état ; le vert "GoPro connectée" s'efface tout seul) -->
