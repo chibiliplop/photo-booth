@@ -98,7 +98,29 @@
 - [ ] **#27 — Mode dégradé GoPro mal documenté** · 🟠 `S`
   *Correctif* : clarifier le `GUIDE` (« bandeau orange = photos en pause, reprise auto au retour »).
 
-### D. Affichage, langue, accessibilité
+### D. Améliorations UX / animations
+
+- [ ] **#UI-1 — Pas de flash visuel au déclenchement** · 🟠 `S`
+  *Pourquoi* : sans retour visuel au moment du shutter, le déclenchement semble silencieux et les invités ne savent pas si la photo a été prise.
+  *Correctif* : rectangle blanc fullscreen (ZIndex élevé) qui monte à opacité 1 puis redescend en ~300 ms via une animation Avalonia, déclenché depuis `ShowPhoto` ou un nouvel événement `IPhotoDisplay.Flash()`. 10 lignes de XAML + 2 lignes de ViewModel.
+
+- [ ] **#UI-2 — Révélation Polaroid de la photo** · 🟡 `M`
+  *Pourquoi* : la photo apparaît instantanément après le slide-in ; un effet de "développement" renforcerait l'analogie Polaroid de l'interface cartes.
+  *Correctif* : animer un `ClipRect` ou un wipe vertical sur l'`Image` (haut → bas, 500–700 ms, EaseOutCubic) une fois la carte arrivée en position.
+
+- [ ] **#UI-3 — Écran idle vide (cartes sans contenu)** · 🟠 `S`
+  *Pourquoi* : au démarrage et entre les séquences, les 3 cartes sont vides ; l'écran semble cassé pour les invités qui arrivent.
+  *Correctif* : overlay centré (ZIndex modéré) visible tant qu'aucune photo n'a été prise, affichant le nom de l'événement + « Appuyez sur le bouton ! ». Disparaît au premier `ShowPhoto`.
+
+- [ ] **#UI-4 — Compte à rebours photo peu visible** · 🟡 `S`
+  *Pourquoi* : le "3 / 2 / 1" s'affiche sur une carte de 600 px inclinée ; illisible à distance pour les invités debout devant la borne.
+  *Correctif* : overlay plein écran (réutiliser la structure du clapperboard vidéo) avec le chiffre centré + animation de pulse (scale 1.3 → 1.0 à chaque battement).
+
+- [ ] **#UI-5 — Pas de profondeur dynamique sur la carte active** · ⚪ `S`
+  *Pourquoi* : toutes les cartes ont la même ombre quelle que soit leur position dans la pile ; la carte du dessus ne "ressort" pas visuellement.
+  *Correctif* : quand `ZIndex = 100`, passer à une `BoxShadow` plus grande/sombre (ex. `-15 15 35 0 #88000000`) via binding sur `CardViewModel.ZIndex`. Pur XAML, zéro code.
+
+### E. Affichage, langue, accessibilité
 
 - [ ] **#21 — Orientation non configurable (paysage verrouillé)** · 🔴 `M`
   *Correctif* : `ThemeOptions.IsPortrait` (swap dimensions + réarrangement des cartes).
