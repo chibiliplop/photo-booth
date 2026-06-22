@@ -86,7 +86,8 @@ Il reste une seule chose à configurer dans `photobooth.json` (sur la clé USB /
   "Name": "photobooth-printer",
   "Copies": 1,
   "Media": "Postcard",
-  "Options": "fit-to-page=true"
+  "Options": "fit-to-page=true",
+  "AllowMultiplePrints": false
 }
 ```
 
@@ -98,14 +99,19 @@ Il reste une seule chose à configurer dans `photobooth.json` (sur la clé USB /
   "Name": "photobooth-printer",
   "Copies": 1,
   "Media": "A4",
-  "Options": "fit-to-page=true"
+  "Options": "fit-to-page=true",
+  "AllowMultiplePrints": false
 }
 ```
 
 Modes de déclenchement (`TriggerMode`) :
 - `manual` : bouton impression séparé (`Hardware.PrintButtonEnabled=true`) ou touche `P` en dev.
 - `auto` : chaque photo est imprimée automatiquement après la capture.
-- `photo-button-window` : pendant X secondes après la capture, le bouton PHOTO imprime la dernière photo au lieu de déclencher une nouvelle.
+- `photo-button-window` : pendant X secondes après la capture, le bouton PHOTO imprime la dernière photo au lieu de déclencher une nouvelle. Pendant cette fenêtre, la photo reste affichée à l'écran avec une pill « Appuyez pour imprimer » et un compte à rebours visible.
+
+`AllowMultiplePrints` (uniquement pour `photo-button-window`) :
+- `false` (défaut) : une seule impression ferme la fenêtre immédiatement.
+- `true` : la fenêtre reste ouverte ; la même photo peut être imprimée plusieurs fois jusqu'à expiration du compte à rebours.
 
 > **Imprimante non détectée ?** Vérifiez que gutenprint supporte votre modèle avec `lpinfo -m | grep -i <modele>`. Si le modèle n'est pas dans gutenprint (imprimantes dye-sub pro DNP/Mitsubishi/HiTi), il faut installer le driver manuellement en SSH puis relancer `sudo systemctl restart photobooth-printer`.
 
