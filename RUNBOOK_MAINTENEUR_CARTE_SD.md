@@ -120,7 +120,8 @@ sudo apt update
 sudo apt install -y \
   gpiod libgpiod3 \
   i2c-tools \
-  libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig
+  libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig \
+  cups cups-client printer-driver-gutenprint
 ```
 
 > RPi OS **Trixie/Debian 13** (base de `raspios_lite_arm64_latest`) : `libgpiod2` est devenu `libgpiod3` et `libegl1-mesa` (transitionnel) a disparu → `libegl1 libegl-mesa0`. Sur une base Bookworm/antérieure, gardez `libgpiod2` / `libegl1-mesa`.

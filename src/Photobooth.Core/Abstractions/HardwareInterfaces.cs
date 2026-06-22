@@ -7,6 +7,7 @@ public interface IButtonInput : IDisposable
 {
     event Action? PhotoPressed;
     event Action? VideoPressed;
+    event Action? PrintPressed;
 
     /// <summary>Begin listening for edges. Safe to call once.</summary>
     void Start();

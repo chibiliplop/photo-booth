@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Avalonia.Platform;
 using Photobooth.Adapters.GoPro;
+using Photobooth.Adapters.Printing;
 using Photobooth.App.ViewModels;
 using Photobooth.Core.Abstractions;
 using Photobooth.Core.Options;
@@ -23,6 +24,7 @@ internal static class ServiceConfiguration
         services.Configure<HardwareOptions>(config.GetSection(HardwareOptions.Section));
         services.Configure<TimingOptions>(config.GetSection(TimingOptions.Section));
         services.Configure<ThemeOptions>(config.GetSection(ThemeOptions.Section));
+        services.Configure<PrinterOptions>(config.GetSection(PrinterOptions.Section));
 
         services.AddLogging(b => b.AddSerilog(dispose: false));
 
@@ -36,6 +38,15 @@ internal static class ServiceConfiguration
             services.AddSingleton<IGoProClient>(CreateFakeGoPro);
         else
             services.AddSingleton<IGoProClient, HttpGoProClient>();
+
+        // Printing: disabled by default; CUPS is the normal Linux path, file is useful for tests/export.
+        var printerType = config.GetSection(PrinterOptions.Section)["Type"] ?? "disabled";
+        if (string.Equals(printerType, "cups", StringComparison.OrdinalIgnoreCase))
+            services.AddSingleton<IPrinterAdapter, CupsPrinterAdapter>();
+        else if (string.Equals(printerType, "file", StringComparison.OrdinalIgnoreCase))
+            services.AddSingleton<IPrinterAdapter, FilePrinterAdapter>();
+        else
+            services.AddSingleton<IPrinterAdapter, NoOpPrinterAdapter>();
 
         // Hardware (single resolution with graceful fallback).
         services.AddSingleton<HardwareBundle>(HardwareBundle.Create);
@@ -52,7 +63,8 @@ internal static class ServiceConfiguration
         return sp.GetRequiredService<IOptions<GoProOptions>>().Value.Validate()
             ?? sp.GetRequiredService<IOptions<HardwareOptions>>().Value.Validate()
             ?? sp.GetRequiredService<IOptions<TimingOptions>>().Value.Validate()
-            ?? sp.GetRequiredService<IOptions<ThemeOptions>>().Value.Validate();
+            ?? sp.GetRequiredService<IOptions<ThemeOptions>>().Value.Validate()
+            ?? sp.GetRequiredService<IOptions<PrinterOptions>>().Value.Validate();
     }
 
     private static FakeGoProClient CreateFakeGoPro(IServiceProvider sp)

@@ -26,6 +26,8 @@
 - [x] **#20 — UI responsive (résolution & tailles d'écran codées en dur)** · 🔴 `L`
   Toute l'UI est composée sur un canevas de référence (`ThemeOptions.ScreenResolution`, défaut `1280x720`) mis à l'échelle uniformément par un `Viewbox` : rendu bord à bord sur tout écran 16:9 (720p/1080p/4K) ; les autres formats sont centrés (fond plein écran via `UniformToFill`, UI ni rognée ni déformée). `MainWindow` n'a plus de `1280×720` en dur (binding `DesignWidth`/`DesignHeight` + repli design). `ScreenResolution` exposé dans `photobooth.json`/`appsettings.json` et validé (repli `1280×720` + message FR si malformé, jamais de crash). Les tailles cartes/polices restent en pixels de design — le `Viewbox` les met à l'échelle.
   *Vérifs* : build 0 warning · 22/22 tests (dont 14 nouveaux : parsing/validation de `ScreenResolution`) · rendu screenshot confirmé en 720p, 1080p (composition identique, scalée) et 1280×1024 (5:4 centré, sans déformation).
+- [x] **#14 — Impression de base** · 🔴 `L`
+  `IPrinterAdapter` + adapters `CupsPrinterAdapter`, `FilePrinterAdapter`, `NoOpPrinterAdapter`. `Printer.Type` configurable (`disabled`/`cups`/`file`). Déclenchement configurable : bouton impression séparé (`manual` + `Hardware.PrintButtonEnabled`), impression automatique (`auto`), ou réutilisation du bouton PHOTO pendant une fenêtre de 15 s (`photo-button-window`). L'UI affiche seulement un indicateur non tactile « Photo imprimable ». Paquets CUPS/Gutenprint ajoutés à l'image pour une Canon Selphy CP1300 configurée comme file CUPS.
 
 **Vérifs** : build 0 warning/erreur · 8/8 tests · binding config 5 cas · rendu runtime du bandeau confirmé · relecture adversariale « OK à livrer ».
 
@@ -68,7 +70,7 @@
   *Correctif* : écran modal « Valider / Recommencer » (15–20 s) + nouvel état machine.
 - [ ] **#18 — Aucune personnalisation du tirage (cadre, logo, filigrane, montage)** · 🟠 `L`
   *Correctif* : `IPrintTemplate` via SkiaSharp (overlay marge/texte/logo, montages 2×2…) appliqué en mémoire sur le `byte[]` avant impression. Modèles en config.
-- [ ] **#14 — Aucune impression** · 🔴 `L`
+- [x] **#14 — Aucune impression** · 🔴 `L`
   *Pourquoi* : aucun chemin d'impression depuis la capture GoPro.
   *Correctif* : abstraction `IPrinterAdapter` + bouton « Imprimer » ; le `byte[]` (éventuellement transformé par #18) est passé directement à l'adapter sans écriture disque.
   *Adapters prévus* :

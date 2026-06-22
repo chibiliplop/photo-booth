@@ -198,4 +198,72 @@ public class WorkflowTests
         }
         finally { await rig.Workflow.DisposeAsync(); }
     }
+
+    [Fact]
+    public async Task Print_command_prints_last_captured_photo_when_enabled()
+    {
+        var rig = TestHarness.Build(NewFake(), printerEnabled: true);
+        await rig.Workflow.StartAsync();
+        try
+        {
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Display.PhotoCount >= 1 && rig.Workflow.State == BoothState.Idle));
+
+            rig.Workflow.Submit(new BoothCommand.PrintRequested());
+
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Printer.PrintCount == 1));
+            Assert.NotNull(rig.Printer.LastPrinted);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task Photo_button_print_window_prints_instead_of_recapturing()
+    {
+        var scripted = new ScriptedGoProClient();
+        var rig = TestHarness.Build(
+            scripted,
+            printerEnabled: true,
+            tunePrinter: p =>
+            {
+                p.Type = "file";
+                p.TriggerMode = "photo-button-window";
+                p.PhotoButtonPrintWindowSeconds = 15;
+            });
+        await rig.Workflow.StartAsync();
+        try
+        {
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Display.PhotoCount >= 1 && rig.Workflow.State == BoothState.Idle));
+            Assert.Equal(1, scripted.TriggerCount);
+
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Printer.PrintCount == 1));
+            Assert.Equal(1, scripted.TriggerCount);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task Auto_print_submits_job_after_capture()
+    {
+        var rig = TestHarness.Build(
+            NewFake(),
+            printerEnabled: true,
+            tunePrinter: p =>
+            {
+                p.Type = "file";
+                p.TriggerMode = "auto";
+            });
+        await rig.Workflow.StartAsync();
+        try
+        {
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Printer.PrintCount == 1));
+            Assert.NotNull(rig.Printer.LastPrinted);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
 }

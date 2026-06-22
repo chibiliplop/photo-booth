@@ -9,6 +9,9 @@ public abstract record BoothCommand
     /// <summary>A photo button press or keyboard trigger.</summary>
     public sealed record PhotoRequested : BoothCommand;
 
+    /// <summary>Print the last captured photo, if printing is enabled and a capture is available.</summary>
+    public sealed record PrintRequested : BoothCommand;
+
     /// <summary>A video button press (starts or stops recording depending on current state).</summary>
     public sealed record VideoToggleRequested : BoothCommand;
 

@@ -1,0 +1,24 @@
+# /etc/systemd/system/photobooth-printer.service
+#
+# Détecte l'imprimante USB et crée la file CUPS "photobooth-printer" au boot.
+# Fonctionne avec l'overlay FS (recrée la file à chaque démarrage si besoin).
+#
+# Logs : journalctl -u photobooth-printer
+
+[Unit]
+Description=Photobooth — configuration automatique de l'imprimante USB
+After=cups.service
+Requires=cups.service
+Before=photobooth.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/photobooth-printer.sh
+User=root
+TimeoutStartSec=60
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

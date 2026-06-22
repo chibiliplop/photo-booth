@@ -95,7 +95,7 @@ usermod -s /bin/bash pi
 say "Mot de passe pi (défaut) = '${PI_PASSWORD}'. Surchargeable par carte via admin.txt."
 
 # N'ajoute que les groupes qui existent (gpio/render/i2c arrivent avec les paquets).
-for grp in sudo gpio i2c video input render tty spi; do
+for grp in sudo gpio i2c video input render tty spi lp; do
     if getent group "$grp" >/dev/null 2>&1; then
         usermod -aG "$grp" pi || warn "Ajout du groupe '$grp' échoué."
     fi
@@ -118,10 +118,11 @@ apt-get install -y --no-install-recommends \
     gpiod libgpiod3 \
     rfkill iw \
     i2c-tools \
-    libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig
+    libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig \
+    cups cups-client printer-driver-gutenprint
 
-# 'render' et 'gpio' peuvent n'apparaître qu'après l'install : on (re)tente l'ajout.
-for grp in gpio render i2c; do
+# 'render', 'gpio' et 'lp' peuvent n'apparaître qu'après l'install : on (re)tente l'ajout.
+for grp in gpio render i2c lp; do
     getent group "$grp" >/dev/null 2>&1 && usermod -aG "$grp" pi || true
 done
 
@@ -170,6 +171,14 @@ enable_unit() {
     fi
 }
 mkdir -p /etc/systemd/system/multi-user.target.wants
+
+# CUPS + détection imprimante USB automatique.
+install -m 0755 /files/deploy/photobooth-printer.sh /usr/local/sbin/photobooth-printer.sh
+sed -i 's/\r$//' /usr/local/sbin/photobooth-printer.sh
+install -m 0644 /files/deploy/systemd/photobooth-printer.service /etc/systemd/system/
+enable_unit cups.service
+enable_unit photobooth-printer.service
+
 enable_unit photobooth-user-access.service
 enable_unit photobooth-provision.service
 if [ "$WANT_KIOSK" = "1" ]; then

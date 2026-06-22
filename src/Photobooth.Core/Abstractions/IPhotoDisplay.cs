@@ -25,6 +25,9 @@ public interface IPhotoDisplay
     /// <summary>Show a captured/slideshow photo (raw encoded image bytes) on the next photo card.</summary>
     void ShowPhoto(byte[] imageData);
 
+    /// <summary>Tell the UI whether the last captured photo can currently be printed.</summary>
+    void SetPrintAvailable(bool available);
+
     /// <summary>
     /// Trigger a brief white-flash shutter feedback. Called once per capture, just before
     /// <see cref="ShowPhoto"/>. The slideshow never calls this — flash is a capture-only event.

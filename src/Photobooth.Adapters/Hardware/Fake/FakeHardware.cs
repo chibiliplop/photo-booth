@@ -12,11 +12,13 @@ public sealed class FakeButtonInput : IButtonInput
 {
     public event Action? PhotoPressed;
     public event Action? VideoPressed;
+    public event Action? PrintPressed;
 
     public void Start() { }
 
     public void PressPhoto() => PhotoPressed?.Invoke();
     public void PressVideo() => VideoPressed?.Invoke();
+    public void PressPrint() => PrintPressed?.Invoke();
 
     public void Dispose() { }
 }

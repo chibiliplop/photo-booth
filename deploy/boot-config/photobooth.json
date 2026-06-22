@@ -53,11 +53,47 @@
     // Broche du bouton VIDEO (defaut 20).
     "VideoButtonPin": 20,
 
+    // Bouton IMPRESSION separe : laissez false si vous n'avez pas de 3e bouton.
+    "PrintButtonEnabled": false,
+
+    // Broche du bouton IMPRESSION (defaut 21). Ignoree si PrintButtonEnabled = false.
+    "PrintButtonPin": 21,
+
     // Lumiere : mettez false si votre borne n'a PAS de lumiere.
     // Dans ce cas la borne fonctionne normalement, sans lumiere.
     "LightEnabled": true,
 
     // Broche de la sortie LUMIERE (defaut 17). Ignoree si LightEnabled = false.
     "LightPin": 17
+  },
+
+  // =====================================================================
+  //  IMPRIMANTE (OPTIONNEL)
+  //  Pour Canon Selphy CP1300 sur Raspberry Pi, configurez d'abord
+  //  l'imprimante dans CUPS, puis mettez Type = "cups".
+  //
+  //  TriggerMode :
+  //  - "manual" = bouton impression separe (Hardware.PrintButtonEnabled=true)
+  //               ou touche P en test/dev.
+  //  - "auto" = imprime automatiquement chaque photo.
+  //  - "photo-button-window" = pendant X secondes apres la photo, le bouton
+  //               PHOTO imprime la photo affichee au lieu de reprendre une photo.
+  // =====================================================================
+  "Printer": {
+    // "disabled" = pas d'impression. "cups" = imprimante Linux/CUPS.
+    // "file" = export JPEG vers un dossier (test).
+    "Type": "disabled",
+
+    "TriggerMode": "photo-button-window",
+    "PhotoButtonPrintWindowSeconds": 15,
+    "AutoPrintDelaySeconds": 0,
+
+    // Nom de la file CUPS. Laissez vide pour l'imprimante par defaut.
+    // Exemple Canon Selphy CP1300 : "Canon_SELPHY_CP1300".
+    "Name": "",
+
+    "Copies": 1,
+    "Media": "Postcard",
+    "Options": "fit-to-page=true"
   }
 }

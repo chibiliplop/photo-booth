@@ -29,6 +29,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private static readonly IBrush InfoBrush    = new SolidColorBrush(Color.FromArgb(0x99, 0, 0, 0));   // pill sombre
 
     private readonly ILogger<MainViewModel> _log;
+    private readonly bool _printerEnabled;
     private int _currentFrame;
     private bool _isRecording;
     private bool _isVideoCountdown;
@@ -43,6 +44,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private DispatcherTimer? _statusHideTimer;
     private string? _diagnostic;
     private bool _isIdle = true;
+    private bool _isPrintAvailable;
 
     public CardViewModel[] Cards { get; } = { new(), new(), new() };
 
@@ -169,14 +171,21 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         private set => SetField(ref _isIdle, value);
     }
 
+    public bool IsPrintAvailable
+    {
+        get => _isPrintAvailable;
+        private set => SetField(ref _isPrintAvailable, value);
+    }
+
 
     /// <summary>Show (or clear) the persistent startup diagnostic banner. Called by the App on the UI thread.</summary>
     public void ShowDiagnostic(string? message) =>
         Dispatcher.UIThread.Post(() => Diagnostic = message);
 
-    public MainViewModel(IOptions<ThemeOptions> theme, ILogger<MainViewModel> log)
+    public MainViewModel(IOptions<ThemeOptions> theme, IOptions<PrinterOptions> printer, ILogger<MainViewModel> log)
     {
         _log = log;
+        _printerEnabled = !printer.Value.IsDisabled;
         var t = theme.Value;
         Names = t.Names;
         Year = t.Year;
@@ -229,6 +238,9 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
             });
         });
     }
+
+    public void SetPrintAvailable(bool available) =>
+        Dispatcher.UIThread.Post(() => IsPrintAvailable = _printerEnabled && available);
 
     public void ShowVideoCountdown(int seconds) =>
         Dispatcher.UIThread.Post(() =>

@@ -32,7 +32,8 @@ internal sealed class RecordingDisplay : IPhotoDisplay
 
     public void ShowMessage(string text) { lock (_lock) _messages.Add(text); }
     public void ShowPhoto(byte[] imageData) => Interlocked.Increment(ref _photoCount);
-    public void Flash() { } // no-op in tests
+    public void Flash() { }
+    public void SetPrintAvailable(bool available) { }
     public void ShowVideoCountdown(int seconds) { lock (_lock) _videoCountdowns.Add(seconds); }
     public void SetRecording(bool recording, int totalSeconds = 0)
     {
@@ -45,6 +46,20 @@ internal sealed class RecordingDisplay : IPhotoDisplay
     public bool SawMessage(string m) { lock (_lock) return _messages.Contains(m); }
     public IReadOnlyList<string> Messages { get { lock (_lock) return _messages.ToList(); } }
     public IReadOnlyList<int> VideoCountdowns { get { lock (_lock) return _videoCountdowns.ToList(); } }
+}
+
+internal sealed class RecordingPrinter : IPrinterAdapter
+{
+    public bool IsEnabled { get; set; }
+    public int PrintCount { get; private set; }
+    public byte[]? LastPrinted { get; private set; }
+
+    public Task PrintAsync(byte[] imageData, CancellationToken ct = default)
+    {
+        PrintCount++;
+        LastPrinted = imageData.ToArray();
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>
@@ -105,13 +120,15 @@ internal sealed class ScriptedGoProClient : IGoProClient
 
 internal static class TestHarness
 {
-    public sealed record Rig(PhotoboothWorkflow Workflow, RecordingDisplay Display, FakeLightOutput Light, IGoProClient GoPro);
+    public sealed record Rig(PhotoboothWorkflow Workflow, RecordingDisplay Display, FakeLightOutput Light, IGoProClient GoPro, RecordingPrinter Printer);
 
     /// <summary>Build a workflow wired to fakes with fast, test-friendly timings.</summary>
     public static Rig Build(
         IGoProClient gopro,
+        bool printerEnabled = false,
         Action<TimingOptions>? tuneTimings = null,
-        Action<GoProOptions>? tuneGoPro = null)
+        Action<GoProOptions>? tuneGoPro = null,
+        Action<PrinterOptions>? tunePrinter = null)
     {
         var timings = new TimingOptions
         {
@@ -137,13 +154,17 @@ internal static class TestHarness
         };
         tuneGoPro?.Invoke(gopt);
 
+        var popt = new PrinterOptions();
+        tunePrinter?.Invoke(popt);
+
         var display = new RecordingDisplay();
         var light = new FakeLightOutput(NullLogger<FakeLightOutput>.Instance);
+        var printer = new RecordingPrinter { IsEnabled = printerEnabled };
         var wf = new PhotoboothWorkflow(
-            gopro, light, display,
-            Options.Create(timings), Options.Create(gopt),
+            gopro, light, display, printer,
+            Options.Create(timings), Options.Create(gopt), Options.Create(popt),
             NullLogger<PhotoboothWorkflow>.Instance);
-        return new Rig(wf, display, light, gopro);
+        return new Rig(wf, display, light, gopro, printer);
     }
 
     public static async Task<bool> WaitForAsync(Func<bool> condition, int timeoutMs = 3000)

@@ -29,8 +29,10 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
     private readonly IGoProClient _gopro;
     private readonly ILightOutput _light;
     private readonly IPhotoDisplay _display;
+    private readonly IPrinterAdapter _printer;
     private readonly TimingOptions _timings;
     private readonly GoProOptions _goproOpt;
+    private readonly PrinterOptions _printerOpt;
     private readonly ILogger<PhotoboothWorkflow> _log;
 
     private readonly Channel<BoothCommand> _channel;
@@ -40,6 +42,8 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
     private int _stateValue = (int)BoothState.Idle;
     private long _recordingEpoch;
     private bool _started;
+    private byte[]? _lastCapturedPhoto;
+    private DateTimeOffset _lastCapturedAt = DateTimeOffset.MinValue;
     private CancellationTokenSource? _lifetimeCts;
     private Task? _consumerTask;
     private Task? _keepAliveTask;
@@ -50,15 +54,19 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         IGoProClient gopro,
         ILightOutput light,
         IPhotoDisplay display,
+        IPrinterAdapter printer,
         IOptions<TimingOptions> timings,
         IOptions<GoProOptions> goproOptions,
+        IOptions<PrinterOptions> printerOptions,
         ILogger<PhotoboothWorkflow> log)
     {
         _gopro = gopro;
         _light = light;
         _display = display;
+        _printer = printer;
         _timings = timings.Value;
         _goproOpt = goproOptions.Value;
+        _printerOpt = printerOptions.Value;
         _log = log;
         _channel = Channel.CreateUnbounded<BoothCommand>(
             new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
@@ -140,9 +148,19 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         {
             case BoothCommand.PhotoRequested:
                 if (State is BoothState.Idle or BoothState.Degraded)
-                    await RunPhotoSequenceAsync(lifetime);
+                {
+                    if (ShouldPhotoButtonPrint())
+                        await PrintLastPhotoAsync(lifetime);
+                    else
+                        await RunPhotoSequenceAsync(lifetime);
+                }
                 else
                     _log.LogDebug("Photo press ignored in state {State}.", State);
+                break;
+
+            case BoothCommand.PrintRequested:
+                if (State is BoothState.Idle or BoothState.Degraded)
+                    await PrintLastPhotoAsync(lifetime);
                 break;
 
             case BoothCommand.VideoToggleRequested:
@@ -200,6 +218,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
     private async Task RunPhotoSequenceAsync(CancellationToken lifetime)
     {
         SetState(BoothState.Capturing);
+        _display.SetPrintAvailable(false);
         using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
         watchdog.CancelAfter(TimeSpan.FromSeconds(_timings.WatchdogSeconds));
         var ct = watchdog.Token;
@@ -237,9 +256,19 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
                 _goproGate.Release();
             }
 
+            _lastCapturedPhoto = photo.ToArray();
+            _lastCapturedAt = DateTimeOffset.UtcNow;
             _display.Flash();
             _display.ShowPhoto(photo);
-            await Task.Delay(_timings.PhotoDisplayMs, ct);
+            _display.SetPrintAvailable(_printer.IsEnabled);
+
+            if (_printer.IsEnabled && _printerOpt.IsAutoTrigger)
+            {
+                if (_printerOpt.AutoPrintDelaySeconds > 0)
+                    await Task.Delay(TimeSpan.FromSeconds(_printerOpt.AutoPrintDelaySeconds), ct);
+                await PrintLastPhotoAsync(lifetime);
+            }
+
             SetState(BoothState.Idle);
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
@@ -269,6 +298,48 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         }
 
         DrainButtonCommands(); // ignore presses that arrived during this sequence
+    }
+
+    private bool ShouldPhotoButtonPrint()
+    {
+        if (!_printer.IsEnabled || !_printerOpt.IsPhotoButtonWindowTrigger || _lastCapturedPhoto is null)
+            return false;
+
+        var elapsed = DateTimeOffset.UtcNow - _lastCapturedAt;
+        return elapsed <= TimeSpan.FromSeconds(_printerOpt.PhotoButtonPrintWindowSeconds);
+    }
+
+    private async Task PrintLastPhotoAsync(CancellationToken lifetime)
+    {
+        if (!_printer.IsEnabled)
+        {
+            _display.SetStatus("Imprimante desactivee", BoothStatusLevel.Warning);
+            return;
+        }
+
+        var photo = _lastCapturedPhoto;
+        if (photo is null)
+        {
+            _display.SetStatus("Aucune photo a imprimer", BoothStatusLevel.Warning);
+            return;
+        }
+
+        using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+        watchdog.CancelAfter(TimeSpan.FromSeconds(_timings.WatchdogSeconds));
+        try
+        {
+            await _printer.PrintAsync(photo, watchdog.Token);
+            _display.SetStatus("Impression lancee", BoothStatusLevel.Ready);
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Printing failed.");
+            _display.SetStatus("Impression impossible", BoothStatusLevel.Error);
+        }
     }
 
     private async Task<HashSet<string>> SnapshotFileNamesAsync(CancellationToken ct)

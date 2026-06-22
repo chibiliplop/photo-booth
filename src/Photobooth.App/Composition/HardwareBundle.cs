@@ -60,8 +60,11 @@ internal sealed class HardwareBundle : IDisposable
                 ILightSensor sensor = opt.LightSensorEnabled
                     ? new Max44009LightSensor(opt)
                     : new FakeLightSensor();
-                log.LogInformation("Using real Raspberry Pi GPIO hardware (photo={Photo}, video={Video}, light={Light}).",
-                    opt.PhotoButtonPin, opt.VideoButtonPin, opt.LightEnabled ? opt.LightPin.ToString() : "désactivée");
+                log.LogInformation("Using real Raspberry Pi GPIO hardware (photo={Photo}, video={Video}, print={Print}, light={Light}).",
+                    opt.PhotoButtonPin,
+                    opt.VideoButtonPin,
+                    opt.PrintButtonEnabled ? opt.PrintButtonPin.ToString() : "disabled",
+                    opt.LightEnabled ? opt.LightPin.ToString() : "disabled");
                 return new HardwareBundle(button, light, sensor, controller, startupWarning: null);
             }
             catch (Exception ex)

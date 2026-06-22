@@ -45,7 +45,8 @@ Ce guide déploie la nouvelle application **Photobooth.App** (.NET 8 / Avalonia)
    sudo apt install -y \
      gpiod libgpiod3 \
      i2c-tools \
-     libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig
+     libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10 fontconfig \
+     cups cups-client printer-driver-gutenprint
    ```
    - `gpiod`/`libgpiod3` : accès GPIO (caractère device `/dev/gpiochip*`). Sur RPi OS Bullseye/Bookworm, le paquet s'appelle encore `libgpiod2`.
    - `libgbm1 libgl1-mesa-dri libegl1 libegl-mesa0 libinput10` : pile d'affichage DRM/FBDev + entrées. Sur Bookworm/antérieur, `libegl1 libegl-mesa0` peut être remplacé par le paquet transitionnel `libegl1-mesa`.
@@ -62,6 +63,51 @@ Ce guide déploie la nouvelle application **Photobooth.App** (.NET 8 / Avalonia)
    ```bash
    sudo apt install -y kmscube && kmscube   # doit afficher un cube animé puis Ctrl+C
    ```
+
+---
+
+## 1bis. Imprimante optionnelle
+
+L'image configure CUPS automatiquement au démarrage : **branchez l'imprimante USB avant d'allumer le Pi**, et le service `photobooth-printer` détecte le modèle, cherche le driver gutenprint correspondant, et crée la file `photobooth-printer`. Aucune commande SSH nécessaire.
+
+Vérification des logs si besoin :
+```bash
+journalctl -u photobooth-printer
+```
+
+Il reste une seule chose à configurer dans `photobooth.json` (sur la clé USB / partition FAT) — les options propres au modèle d'imprimante :
+
+**Canon Selphy CP1300 (dye-sublimation Postcard)**
+```json
+"Printer": {
+  "Type": "cups",
+  "TriggerMode": "photo-button-window",
+  "PhotoButtonPrintWindowSeconds": 15,
+  "Name": "photobooth-printer",
+  "Copies": 1,
+  "Media": "Postcard",
+  "Options": "fit-to-page=true"
+}
+```
+
+**Imprimante jet d'encre / laser A4 générique**
+```json
+"Printer": {
+  "Type": "cups",
+  "TriggerMode": "auto",
+  "Name": "photobooth-printer",
+  "Copies": 1,
+  "Media": "A4",
+  "Options": "fit-to-page=true"
+}
+```
+
+Modes de déclenchement (`TriggerMode`) :
+- `manual` : bouton impression séparé (`Hardware.PrintButtonEnabled=true`) ou touche `P` en dev.
+- `auto` : chaque photo est imprimée automatiquement après la capture.
+- `photo-button-window` : pendant X secondes après la capture, le bouton PHOTO imprime la dernière photo au lieu de déclencher une nouvelle.
+
+> **Imprimante non détectée ?** Vérifiez que gutenprint supporte votre modèle avec `lpinfo -m | grep -i <modele>`. Si le modèle n'est pas dans gutenprint (imprimantes dye-sub pro DNP/Mitsubishi/HiTi), il faut installer le driver manuellement en SSH puis relancer `sudo systemctl restart photobooth-printer`.
 
 ---
 

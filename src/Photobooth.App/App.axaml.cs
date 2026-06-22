@@ -83,6 +83,7 @@ public partial class App : Application
         // Route hardware buttons (and keyboard) to the workflow's command channel.
         buttons.PhotoPressed += () => workflow.Submit(new BoothCommand.PhotoRequested());
         buttons.VideoPressed += () => workflow.Submit(new BoothCommand.VideoToggleRequested());
+        buttons.PrintPressed += () => workflow.Submit(new BoothCommand.PrintRequested());
         try
         {
             buttons.Start();
@@ -122,6 +123,9 @@ public partial class App : Application
                 break;
             case Key.V:
                 workflow.Submit(new BoothCommand.VideoToggleRequested());
+                break;
+            case Key.P:
+                workflow.Submit(new BoothCommand.PrintRequested());
                 break;
         }
     }
