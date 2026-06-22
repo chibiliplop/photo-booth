@@ -15,7 +15,9 @@ public sealed class HardwareOptions
 
     public int PhotoButtonPin { get; set; } = 18;
     public int VideoButtonPin { get; set; } = 20;
+    public int PrintButtonPin { get; set; } = 21;
     public int LightPin { get; set; } = 17;
+    public bool PrintButtonEnabled { get; set; } = false;
 
     /// <summary>
     /// Set false when the booth has NO light wired. When disabled the light GPIO is never opened and the
@@ -43,6 +45,7 @@ public sealed class HardwareOptions
             ("PhotoButtonPin", PhotoButtonPin),
             ("VideoButtonPin", VideoButtonPin),
         };
+        if (PrintButtonEnabled) pins.Add(("PrintButtonPin", PrintButtonPin));
         if (LightEnabled) pins.Add(("LightPin", LightPin));
 
         foreach (var (name, pin) in pins)
