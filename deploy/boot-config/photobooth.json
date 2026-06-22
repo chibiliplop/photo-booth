@@ -88,9 +88,9 @@
     "PhotoButtonPrintWindowSeconds": 15,
     "AutoPrintDelaySeconds": 0,
 
-    // Nom de la file CUPS. Laissez vide pour l'imprimante par defaut.
-    // Exemple Canon Selphy CP1300 : "Canon_SELPHY_CP1300".
-    "Name": "",
+    // Nom de la file CUPS cree automatiquement au demarrage par le Pi.
+    // Ne changez pas cette valeur.
+    "Name": "photobooth-printer",
 
     "Copies": 1,
     "Media": "Postcard",

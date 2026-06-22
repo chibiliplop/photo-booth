@@ -19,8 +19,8 @@ public sealed class PrinterOptions
     /// <summary>When TriggerMode="auto", wait this many seconds after capture before submitting the print job.</summary>
     public int AutoPrintDelaySeconds { get; set; } = 0;
 
-    /// <summary>CUPS queue name. Empty means use the system default printer.</summary>
-    public string Name { get; set; } = string.Empty;
+    /// <summary>CUPS queue name. Defaults to "photobooth-printer" (created automatically at boot).</summary>
+    public string Name { get; set; } = "photobooth-printer";
 
     public int Copies { get; set; } = 1;
 
