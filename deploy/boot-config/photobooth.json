@@ -69,27 +69,27 @@
 
   // =====================================================================
   //  IMPRIMANTE (OPTIONNEL)
-  //  Pour Canon Selphy CP1300 sur Raspberry Pi, configurez d'abord
-  //  l'imprimante dans CUPS, puis mettez Type = "cups".
+  //  Branchez l'imprimante USB avant d'allumer le Pi : la borne detecte
+  //  automatiquement le modele et configure CUPS sans intervention SSH.
+  //  Pour activer, changez Type de "disabled" a "cups", puis ajustez
+  //  Media selon votre modele :
+  //    Canon Selphy CP1300  => Media: "Postcard"
+  //    Jet d'encre / laser  => Media: "A4"
   //
   //  TriggerMode :
-  //  - "manual" = bouton impression separe (Hardware.PrintButtonEnabled=true)
-  //               ou touche P en test/dev.
+  //  - "photo-button-window" = apres la photo, le bouton PHOTO imprime
+  //    pendant X secondes au lieu de reprendre une photo. (recommande)
   //  - "auto" = imprime automatiquement chaque photo.
-  //  - "photo-button-window" = pendant X secondes apres la photo, le bouton
-  //               PHOTO imprime la photo affichee au lieu de reprendre une photo.
+  //  - "manual" = bouton impression separe (Hardware.PrintButtonEnabled=true).
   // =====================================================================
   "Printer": {
-    // "disabled" = pas d'impression. "cups" = imprimante Linux/CUPS.
-    // "file" = export JPEG vers un dossier (test).
+    // Pour activer l'impression, remplacez "disabled" par "cups".
     "Type": "disabled",
 
     "TriggerMode": "photo-button-window",
     "PhotoButtonPrintWindowSeconds": 15,
-    "AutoPrintDelaySeconds": 0,
 
-    // Nom de la file CUPS cree automatiquement au demarrage par le Pi.
-    // Ne changez pas cette valeur.
+    // Nom de la file CUPS cree automatiquement au demarrage. Ne pas modifier.
     "Name": "photobooth-printer",
 
     "Copies": 1,

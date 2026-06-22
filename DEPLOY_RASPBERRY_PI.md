@@ -115,7 +115,7 @@ Modes de déclenchement (`TriggerMode`) :
 
 Créer un utilisateur de service (ou réutiliser `pi`) et lui donner accès GPIO/I2C/affichage :
 ```bash
-sudo usermod -aG gpio,i2c,video,input,render,tty pi
+sudo usermod -aG gpio,i2c,video,input,render,tty,lp pi
 # se reconnecter (ou redémarrer le service) pour appliquer les groupes
 ```
 Sur Raspberry Pi OS les règles udev (`/etc/udev/rules.d/99-com.rules`) assignent déjà `/dev/gpiochip*` au groupe `gpio` et `/dev/i2c-*` au groupe `i2c`. Sur une distro minimale, ajouter :
