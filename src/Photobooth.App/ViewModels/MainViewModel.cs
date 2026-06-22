@@ -30,6 +30,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
 
     private readonly ILogger<MainViewModel> _log;
     private readonly bool _printerEnabled;
+    private readonly int _printWindowSeconds;
     private int _currentFrame;
     private bool _isRecording;
     private bool _isVideoCountdown;
@@ -42,9 +43,11 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private bool _hasConnectivity;
     private IBrush _connectivityBrush = Brushes.Transparent;
     private DispatcherTimer? _statusHideTimer;
+    private DispatcherTimer? _printCountdownTimer;
     private string? _diagnostic;
     private bool _isIdle = true;
     private bool _isPrintAvailable;
+    private int _printCountdown;
 
     public CardViewModel[] Cards { get; } = { new(), new(), new() };
 
@@ -177,6 +180,17 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         private set => SetField(ref _isPrintAvailable, value);
     }
 
+    public int PrintCountdown
+    {
+        get => _printCountdown;
+        private set
+        {
+            if (SetField(ref _printCountdown, value))
+                Raise(nameof(PrintCountdownText));
+        }
+    }
+
+    public string PrintCountdownText => $"Photo imprimable  {_printCountdown}s";
 
     /// <summary>Show (or clear) the persistent startup diagnostic banner. Called by the App on the UI thread.</summary>
     public void ShowDiagnostic(string? message) =>
@@ -186,6 +200,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     {
         _log = log;
         _printerEnabled = !printer.Value.IsDisabled;
+        _printWindowSeconds = printer.Value.PhotoButtonPrintWindowSeconds;
         var t = theme.Value;
         Names = t.Names;
         Year = t.Year;
@@ -240,7 +255,14 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     }
 
     public void SetPrintAvailable(bool available) =>
-        Dispatcher.UIThread.Post(() => IsPrintAvailable = _printerEnabled && available);
+        Dispatcher.UIThread.Post(() =>
+        {
+            IsPrintAvailable = _printerEnabled && available;
+            if (_printerEnabled && available)
+                StartPrintCountdown();
+            else
+                StopPrintCountdown();
+        });
 
     public void ShowVideoCountdown(int seconds) =>
         Dispatcher.UIThread.Post(() =>
@@ -311,6 +333,28 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     // ---- internals ----
 
     private void ClearIdle() { if (_isIdle) IsIdle = false; }
+
+    private void StartPrintCountdown()
+    {
+        PrintCountdown = _printWindowSeconds;
+        if (_printCountdownTimer is null)
+        {
+            _printCountdownTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _printCountdownTimer.Tick += (_, _) =>
+            {
+                if (PrintCountdown > 0) PrintCountdown--;
+                if (PrintCountdown <= 0) _printCountdownTimer!.Stop();
+            };
+        }
+        _printCountdownTimer.Stop();
+        _printCountdownTimer.Start();
+    }
+
+    private void StopPrintCountdown()
+    {
+        _printCountdownTimer?.Stop();
+        PrintCountdown = 0;
+    }
 
     private void EnsureHideTimer()
     {
