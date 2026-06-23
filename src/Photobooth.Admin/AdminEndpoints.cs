@@ -153,4 +153,18 @@ public static class AdminEndpoints
 
         app.MapGet("/api/logs", (InMemoryLogSink sink) => Results.Json(sink.Snapshot()));
     }
+
+    /// <summary>Onglet imprimante (§8) : état + actions CUPS. Actions soumises au middleware CSRF.</summary>
+    public static void MapPrinter(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/printer", async (PrinterControl pc) => Results.Json(await pc.StatusAsync()));
+        app.MapGet("/api/printer/usb", async (PrinterControl pc) => Results.Json(await pc.DetectUsbAsync()));
+        app.MapGet("/api/printer/queue", async (PrinterControl pc) => Results.Json(await pc.QueueAsync()));
+        app.MapGet("/api/printer/cups-log", async (PrinterControl pc) => Results.Json(await pc.CupsLogAsync()));
+
+        app.MapPost("/api/printer/enable", async (PrinterControl pc) => Results.Json(await pc.EnableAsync()));
+        app.MapPost("/api/printer/accept", async (PrinterControl pc) => Results.Json(await pc.AcceptAsync()));
+        app.MapPost("/api/printer/test", async (PrinterControl pc) => Results.Json(await pc.TestPrintAsync()));
+        app.MapPost("/api/printer/purge", async (PrinterControl pc) => Results.Json(await pc.PurgeAsync()));
+    }
 }
