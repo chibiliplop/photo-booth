@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Photobooth.Core.Abstractions;
+using Photobooth.Core.Diagnostics;
 using Photobooth.Core.GoPro;
 using Photobooth.Core.Options;
 using Photobooth.Core.Resilience;
@@ -30,6 +31,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
     private readonly ILightOutput _light;
     private readonly IPhotoDisplay _display;
     private readonly IPrinterAdapter _printer;
+    private readonly BoothTelemetry _telemetry;
     private readonly TimingOptions _timings;
     private readonly GoProOptions _goproOpt;
     private readonly PrinterOptions _printerOpt;
@@ -55,6 +57,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         ILightOutput light,
         IPhotoDisplay display,
         IPrinterAdapter printer,
+        BoothTelemetry telemetry,
         IOptions<TimingOptions> timings,
         IOptions<GoProOptions> goproOptions,
         IOptions<PrinterOptions> printerOptions,
@@ -64,6 +67,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         _light = light;
         _display = display;
         _printer = printer;
+        _telemetry = telemetry;
         _timings = timings.Value;
         _goproOpt = goproOptions.Value;
         _printerOpt = printerOptions.Value;
@@ -336,6 +340,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         try
         {
             await _printer.PrintAsync(photo, watchdog.Token);
+            _telemetry.RecordPrintSuccess();
             _display.SetStatus("Impression lancee", BoothStatusLevel.Ready);
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
@@ -345,6 +350,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
         catch (Exception ex)
         {
             _log.LogWarning(ex, "Printing failed.");
+            _telemetry.RecordPrintFailure(ex.Message);
             _display.SetStatus("Impression impossible", BoothStatusLevel.Error);
         }
     }

@@ -11,6 +11,7 @@ using Photobooth.Core.Abstractions;
 using Photobooth.Core.GoPro;
 using Photobooth.Core.Options;
 using Photobooth.Core.Resilience;
+using Photobooth.Core.Diagnostics;
 using Photobooth.Core.Workflow;
 
 namespace Photobooth.Tests;
@@ -51,11 +52,14 @@ internal sealed class RecordingDisplay : IPhotoDisplay
 internal sealed class RecordingPrinter : IPrinterAdapter
 {
     public bool IsEnabled { get; set; }
+    public bool ThrowOnPrint { get; set; }
     public int PrintCount { get; private set; }
     public byte[]? LastPrinted { get; private set; }
 
     public Task PrintAsync(byte[] imageData, CancellationToken ct = default)
     {
+        if (ThrowOnPrint)
+            throw new System.InvalidOperationException("lp failed with exit code 1: unknown destination");
         PrintCount++;
         LastPrinted = imageData.ToArray();
         return Task.CompletedTask;
@@ -120,7 +124,7 @@ internal sealed class ScriptedGoProClient : IGoProClient
 
 internal static class TestHarness
 {
-    public sealed record Rig(PhotoboothWorkflow Workflow, RecordingDisplay Display, FakeLightOutput Light, IGoProClient GoPro, RecordingPrinter Printer);
+    public sealed record Rig(PhotoboothWorkflow Workflow, RecordingDisplay Display, FakeLightOutput Light, IGoProClient GoPro, RecordingPrinter Printer, BoothTelemetry Telemetry);
 
     /// <summary>Build a workflow wired to fakes with fast, test-friendly timings.</summary>
     public static Rig Build(
@@ -160,11 +164,12 @@ internal static class TestHarness
         var display = new RecordingDisplay();
         var light = new FakeLightOutput(NullLogger<FakeLightOutput>.Instance);
         var printer = new RecordingPrinter { IsEnabled = printerEnabled };
+        var telemetry = new BoothTelemetry();
         var wf = new PhotoboothWorkflow(
-            gopro, light, display, printer,
+            gopro, light, display, printer, telemetry,
             Options.Create(timings), Options.Create(gopt), Options.Create(popt),
             NullLogger<PhotoboothWorkflow>.Instance);
-        return new Rig(wf, display, light, gopro, printer);
+        return new Rig(wf, display, light, gopro, printer, telemetry);
     }
 
     public static async Task<bool> WaitForAsync(Func<bool> condition, int timeoutMs = 3000)

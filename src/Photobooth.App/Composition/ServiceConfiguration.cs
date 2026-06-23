@@ -10,6 +10,7 @@ using Photobooth.Adapters.GoPro;
 using Photobooth.Adapters.Printing;
 using Photobooth.App.ViewModels;
 using Photobooth.Core.Abstractions;
+using Photobooth.Core.Diagnostics;
 using Photobooth.Core.Options;
 using Photobooth.Core.Workflow;
 using Serilog;
@@ -54,6 +55,7 @@ internal static class ServiceConfiguration
         services.AddSingleton<ILightOutput>(sp => sp.GetRequiredService<HardwareBundle>().Light);
         services.AddSingleton<ILightSensor>(sp => sp.GetRequiredService<HardwareBundle>().Sensor);
 
+        services.AddSingleton<BoothTelemetry>();
         services.AddSingleton<PhotoboothWorkflow>();
         return services;
     }
