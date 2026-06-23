@@ -9,6 +9,7 @@ DIR="$(dirname "$DEST")"
 mkdir -p "$DIR"
 
 TMP="$(mktemp "$DIR/.photobooth.json.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
 cat > "$TMP"            # stdin -> fichier temporaire
 sync "$TMP" 2>/dev/null || true
 mv -f "$TMP" "$DEST"    # rename atomique sur le même volume
