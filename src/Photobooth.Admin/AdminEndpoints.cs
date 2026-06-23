@@ -238,4 +238,15 @@ public static class AdminEndpoints
         var json = JsonSerializer.Serialize(line, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         await ctx.Response.WriteAsync($"data: {json}\n\n", ct);
     }
+
+    /// <summary>Onglet console (D8). Soumis au middleware CSRF + audit-log côté service.</summary>
+    public static void MapConsole(IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/console", async (ConsoleRequest req, ConsoleService console) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Command))
+                return Results.Json(new { error = "commande vide" }, statusCode: StatusCodes.Status400BadRequest);
+            return Results.Json(await console.RunAsync(req.Command));
+        });
+    }
 }

@@ -148,4 +148,25 @@ public sealed class AdminWriteEndpointsTests
         Assert.Equal("application/json", res.Content.Headers.ContentType?.MediaType);
         Assert.Equal("{}", (await res.Content.ReadAsStringAsync()).Trim());
     }
+
+    [Fact]
+    public async Task Post_console_runs_command_and_returns_output()
+    {
+        var runner = new FakeProcessRunner { Result = new ProcessResult(0, "pong", "", false) };
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton(new ConsoleService(runner,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ConsoleService>.Instance));
+        var app = builder.Build();
+        AdminEndpoints.MapConsole(app);
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.PostAsJsonAsync("/api/console", new ConsoleRequest("echo pong"));
+        res.EnsureSuccessStatusCode();
+        var result = await res.Content.ReadFromJsonAsync<ProcessResult>();
+        Assert.NotNull(result);
+        Assert.Contains("pong", result!.Stdout);
+    }
 }
