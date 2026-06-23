@@ -170,6 +170,8 @@ Si votre mainteneur vous demande de l'activer, c'est une seule chose : dans `pho
 
 > ⚠️ **Toujours un PIN**, et seulement sur demande : cette page permet de piloter la borne. Ne l'activez pas « pour voir », et remettez `"Enabled": false` (ou retirez le bloc) une fois le dépannage terminé.
 
+Une fois activée, **au démarrage la borne affiche à l'écran l'adresse web à ouvrir** (par ex. `http://10.5.5.x:8080`). Notez-la, puis **appuyez sur le bouton photo** : l'écran disparaît et la borne démarre normalement — ce premier appui ne prend pas de photo.
+
 ---
 
 ## Ranger / éteindre proprement

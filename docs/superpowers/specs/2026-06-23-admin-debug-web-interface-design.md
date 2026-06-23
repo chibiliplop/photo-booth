@@ -29,7 +29,7 @@ D'après `src/Photobooth.Core/Options/GoProOptions.cs` (`ControlBaseUrl=http://1
 | D2 | Capacités | Dashboard + logs/debug + config + actions + console arbitraire |
 | D3 | Exposition réseau | Configurable : `ap` \| `gopro` \| `both` |
 | D4 | Mode `ap` | AP+STA concurrent (`ap0` virtuel + hostapd + dnsmasq), **opt-in, `false` par défaut** |
-| D5 | Découverte d'IP | mDNS (`photobooth.local`) **+** overlay boot affichant l'URL/IP, **dismiss au 1er appui bouton** puis caché en usage normal |
+| D5 | Découverte d'IP | mDNS (`photobooth.local`, hors périmètre) **+** overlay boot affichant l'URL/IP, **dismiss au 1er appui bouton photo** puis caché en usage normal. **Overlay livré le 2026-06-24** (`Admin.ShowAddressOnStartup`, défaut true) — voir `docs/superpowers/plans/2026-06-24-admin-startup-address-screen.md`. |
 | D6 | Auth | Mot de passe AP ; **PIN (`Admin.Pin`)** = *seule* frontière réseau↔root en `gopro`/`both` (voir D8/D9). Reste techniquement optionnel : si vide + `Enabled`, l'hôte démarre quand même avec **warning bruyant** et surface complète exposée (dérogation read-write 2026-06-23). |
 | D7 | Application config | Écrit `photobooth.json` (sur la FAT32, **via chemin privilégié** car app non-root, écriture **atomique** temp+rename) puis **restart du service `photobooth`** (pas reboot système). Voir §14. |
 | D8 | Console | Commande **one-shot arbitraire**, sortie streamée, timeout + kill. ~~user app non-root~~ → **exécutée en `pi` avec `sudo` NOPASSWD: ALL disponible** = console root de fait (dérogation read-write 2026-06-23, écrase le « non-root » initial). |

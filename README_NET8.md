@@ -89,6 +89,7 @@ Tout est dans `src/Photobooth.App/appsettings.json` (sections `Gopro`, `Hardware
 | `ListenAddress` | `0.0.0.0` | interface d'écoute Kestrel |
 | `Port` | `8080` | port (distinct du 8080 de la GoPro `10.5.5.9`) |
 | `Pin` | `""` (vide) | PIN d'accès ; **vide = aucune authentification** |
+| `ShowAddressOnStartup` | `true` | affiche l'URL d'admin à l'écran au démarrage (1er appui bouton photo = fermeture, sans photo) |
 
 Activation (dev) :
 
