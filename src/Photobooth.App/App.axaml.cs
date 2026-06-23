@@ -56,17 +56,24 @@ public partial class App : Application
         _workflow = workflow;
 
         // Decision admin lue une fois : sert a l'ecran d'accueil (ci-dessous) et au demarrage de l'hote.
-        var adminOpt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Photobooth.Core.Options.AdminOptions>>().Value;
-
-        // 1re action si l'admin est active : afficher l'URL a ouvrir (D5). Arme AVANT le demarrage des
-        // boutons pour qu'aucun appui ne soit capture avant la fermeture de l'ecran.
-        if (adminOpt.Enabled && adminOpt.ShowAddressOnStartup)
+        // Tout echec (DI/options, resolution reseau) est degrade, jamais fatal : la borne ne doit
+        // jamais tomber a cause du mode admin. L'ecran et l'arme du gate restent AVANT buttons.Start().
+        Photobooth.Core.Options.AdminOptions? adminOpt = null;
+        try
         {
-            var urls = Photobooth.Admin.AdminAddress.LocalUrls(adminOpt.Port);
-            vm.ShowAdminAddress(urls.Count > 0
-                ? string.Join("\n", urls)
-                : "Adresse introuvable — vérifiez le réseau.");
-            _noticeGate.Arm();
+            adminOpt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Photobooth.Core.Options.AdminOptions>>().Value;
+            if (adminOpt.Enabled && adminOpt.ShowAddressOnStartup)
+            {
+                var urls = Photobooth.Admin.AdminAddress.LocalUrls(adminOpt.Port);
+                vm.ShowAdminAddress(urls.Count > 0
+                    ? string.Join("\n", urls)
+                    : "Adresse introuvable — vérifiez le réseau.");
+                _noticeGate.Arm();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Écran d'accueil admin ignoré (mode dégradé).");
         }
 
         Control? root = null;
@@ -121,7 +128,7 @@ public partial class App : Application
         // arrête l'hôte à l'extinction, comme le workflow.
         try
         {
-            if (adminOpt.Enabled)
+            if (adminOpt?.Enabled == true)
                 _ = sp.GetRequiredService<AdminWebHost>().StartAsync();
         }
         catch (Exception ex)
