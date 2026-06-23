@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -84,5 +86,70 @@ public sealed class AdminEndpointsTests
         Assert.NotNull(lines);
         Assert.Single(lines!);
         Assert.Contains("admin", lines![0].Message);
+    }
+
+    private static WebApplication BuildAppWithAuth(string pin, string token)
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton(new BoothTelemetry());
+        builder.Services.AddSingleton(new InMemoryLogSink());
+        builder.Services.AddSingleton<IPrinterAdapter>(new StubPrinter { IsEnabled = false });
+        builder.Services.AddSingleton(Options.Create(new PrinterOptions()));
+        var app = builder.Build();
+        AdminEndpoints.UseAuth(app, new AdminOptions { Pin = pin }, token);
+        AdminEndpoints.MapApi(app);
+        return app;
+    }
+
+    [Fact]
+    public async Task Pin_gate_accepts_correct_cookie_only()
+    {
+        await using var app = BuildAppWithAuth(pin: "1234", token: "TESTTOKEN");
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        // Sans cookie -> 401.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/status")).StatusCode);
+
+        // Mauvais cookie -> 401.
+        var wrong = new HttpRequestMessage(HttpMethod.Get, "/api/status");
+        wrong.Headers.Add("Cookie", "padmin=WRONG");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(wrong)).StatusCode);
+
+        // Bon cookie (jeton attendu) -> 200.
+        var good = new HttpRequestMessage(HttpMethod.Get, "/api/status");
+        good.Headers.Add("Cookie", "padmin=TESTTOKEN");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(good)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_sets_cookie_on_correct_pin_only()
+    {
+        await using var app = BuildAppWithAuth(pin: "1234", token: "TESTTOKEN");
+        await app.StartAsync();
+        var client = app.GetTestClient(); // handler TestServer : ne suit pas les redirections.
+
+        // Bon PIN -> 302 vers / + Set-Cookie portant le jeton.
+        var ok = await client.PostAsync("/login",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["pin"] = "1234" }));
+        Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
+        Assert.Contains(ok.Headers.GetValues("Set-Cookie"), v => v.Contains("padmin=TESTTOKEN"));
+
+        // Mauvais PIN -> aucun Set-Cookie.
+        var bad = await client.PostAsync("/login",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["pin"] = "9999" }));
+        Assert.False(bad.Headers.Contains("Set-Cookie"));
+    }
+
+    [Fact]
+    public async Task Empty_pin_means_no_auth()
+    {
+        await using var app = BuildAppWithAuth(pin: "", token: "TESTTOKEN");
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/status")).StatusCode);
     }
 }

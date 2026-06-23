@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -27,6 +28,7 @@ public sealed class AdminWebHost : IAsyncDisposable
     private readonly IOptions<PrinterOptions> _printerOptions;
     private readonly AdminOptions _opt;
     private readonly ILogger<AdminWebHost> _log;
+    private readonly string _authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
     private WebApplication? _app;
 
     public AdminWebHost(
@@ -64,6 +66,7 @@ public sealed class AdminWebHost : IAsyncDisposable
             builder.WebHost.UseUrls($"http://{_opt.ListenAddress}:{_opt.Port}");
 
             var app = builder.Build();
+            AdminEndpoints.UseAuth(app, _opt, _authToken);
             AdminEndpoints.MapApi(app);
             await app.StartAsync();
 
