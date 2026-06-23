@@ -31,9 +31,9 @@ D'après `src/Photobooth.Core/Options/GoProOptions.cs` (`ControlBaseUrl=http://1
 | D4 | Mode `ap` | AP+STA concurrent (`ap0` virtuel + hostapd + dnsmasq), **opt-in, `false` par défaut** |
 | D5 | Découverte d'IP | mDNS (`photobooth.local`) **+** overlay boot affichant l'URL/IP, **dismiss au 1er appui bouton** puis caché en usage normal |
 | D6 | Auth | Mot de passe AP uniquement ; **PIN optionnel** (`Admin.Pin`) recommandé si exposition `gopro`/`both` |
-| D7 | Application config | Écrit `photobooth.json` puis **restart du service `photobooth`** (pas reboot système) |
+| D7 | Application config | Écrit `photobooth.json` (sur la FAT32, **via chemin privilégié** car app non-root, écriture **atomique** temp+rename) puis **restart du service `photobooth`** (pas reboot système). Voir §14. |
 | D8 | Console | Commande **one-shot arbitraire**, sortie streamée, exécutée en **utilisateur app (non-root)**, timeout + kill |
-| D9 | Privilèges | Actions système via **sudoers en liste blanche** ; jamais de shell root |
+| D9 | Privilèges | Actions système **et écriture config FAT32** via **sudoers en liste blanche** ; jamais de shell root |
 | D10 | Flag maître | `Admin.Enabled` (défaut `false`), lu par la couche réseau (script boot) **et** par l'app |
 | D11 | Robustesse | Tout échec du bloc admin (AP qui ne monte pas, avahi absent, commande KO) est **dégradé, jamais fatal** |
 
@@ -150,3 +150,14 @@ Chaque phase a son propre plan d'implémentation.
 - Pas de hot-reload de config sans restart (D7 tranché : restart service).
 - Pas de HTTPS/TLS (réseau local de confiance ; ajoutable plus tard si besoin).
 - Pas de terminal interactif PTY (D8 tranché : console one-shot).
+
+## 14. Système de fichiers overlay (root read-only) — contraintes
+
+Architecture 2 couches (RUNBOOK §0/§3, `deploy/README.md`) : root ext4 **figé en overlay read-only** (image « dist », `PHOTOBOOTH_OVERLAY=1`) ; FAT32 `/boot/firmware/photobooth/` **hors overlay**, éditable et persistante. L'app tourne en **`User=pi` non-root** (`deploy/systemd/photobooth.service:25`), WorkingDirectory `/home/pi/photobooth` (sur l'ext4 → overlay).
+
+1. **Écriture config** : `photobooth.json` est sur la FAT32 → les écritures **persistent**. Mais la FAT32 est montée **root** et l'app est `pi` → écriture **via chemin privilégié** (helper root en liste blanche sudoers), en **atomique** (temp + rename) pour résister à une coupure secteur (FAT n'a pas de journal).
+2. **Artefacts système de la feature** (`photobooth-admin-ap.sh`, `photobooth-admin-ap.service`, fichier sudoers, confs hostapd/dnsmasq, conf avahi) → **bakés dans l'image** via `image-builder/scripts/00-photobooth.sh` + versionnés dans `deploy/`. **Jamais créés au runtime** (sinon perdus au reboot). Pattern identique au provisioning existant.
+3. **Changements runtime éphémères** (par design overlay) : `cupsenable`/`cupsaccept`/`lpadmin` depuis l'onglet imprimante sont réinitialisés au reboot (raison d'être de `photobooth-printer.service` qui recrée la file à chaque boot). L'UI doit indiquer « temporaire » ; un correctif durable passe par la config FAT32 ou l'image.
+4. **Logs** : Serilog écrit dans `/home/pi/photobooth/logs/` (overlay) et journald est probablement en RAM → **perdus au reboot**. Le buffer mémoire (`InMemoryLogSink`) est volatil aussi. Pour débuguer un crash **après reboot**, prévoir une option d'écriture des logs debug sur la **FAT32** (hors overlay).
+5. **Flags & params** (`Admin.Enabled`, SSID/mot de passe AP) dans `photobooth.json` (FAT32) → persistent, éditables, lus par le script boot comme `wifi.txt`.
+6. **Dev vs dist** : l'image **dev** (`PHOTOBOOTH_OVERLAY=0`, root inscriptible) permet de développer/tester toute la **Phase 1** sans ces contraintes ; elles ne s'appliquent qu'à l'image **dist** et à la Phase 2.
