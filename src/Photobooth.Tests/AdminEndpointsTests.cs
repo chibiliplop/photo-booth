@@ -171,4 +171,22 @@ public sealed class AdminEndpointsTests
         var html = await res.Content.ReadAsStringAsync();
         Assert.Contains("Borne photo", html);
     }
+
+    [Fact]
+    public async Task Root_page_has_tabs_and_no_unsafe_log_innerhtml()
+    {
+        await using var app = BuildApp(new BoothTelemetry(), new InMemoryLogSink(), printerEnabled: false);
+        AdminEndpoints.MapPage(app);
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var html = await client.GetStringAsync("/");
+        Assert.Contains("Borne photo", html);
+        Assert.Contains("data-tab=\"printer\"", html);
+        Assert.Contains("data-tab=\"console\"", html);
+        Assert.Contains("data-tab=\"config\"", html);
+        // Le compromis XSS read-only du 2/3 ne doit plus exister : pas d'innerHTML des logs.
+        Assert.DoesNotContain("box.innerHTML = rows", html);
+        Assert.Contains("textContent", html);
+    }
 }

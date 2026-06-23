@@ -11,14 +11,22 @@
   .badge { padding: .2rem .6rem; border-radius: .4rem; background: #333; font-size: .9rem; }
   .dot { width: .8rem; height: .8rem; border-radius: 50%; display: inline-block; }
   .ok { background: #2e9b4f; } .ko { background: #c0392b; } .unknown { background: #888; }
+  nav { display: flex; gap: .3rem; padding: .4rem 1rem; background: #181818; flex-wrap: wrap; }
+  nav button { background: #2a2a2a; color: #ddd; border: 0; padding: .5rem .9rem; border-radius: .4rem; cursor: pointer; }
+  nav button.active { background: #3a6ea5; color: #fff; }
   main { padding: 1rem; }
+  .tab { display: none; } .tab.active { display: block; }
   .card { background: #1c1c1c; border-radius: .5rem; padding: 1rem; margin-bottom: 1rem; }
-  .fail { border-left: 4px solid #c0392b; }
-  .ok-print { border-left: 4px solid #2e9b4f; }
-  #logs { font-family: ui-monospace, monospace; font-size: .8rem; white-space: pre-wrap;
+  .fail { border-left: 4px solid #c0392b; } .ok-print { border-left: 4px solid #2e9b4f; }
+  button.act { background: #3a6ea5; color: #fff; border: 0; padding: .5rem .9rem; border-radius: .4rem; cursor: pointer; margin: .2rem .3rem .2rem 0; }
+  button.danger { background: #8e2b22; }
+  pre, #logs { font-family: ui-monospace, monospace; font-size: .8rem; white-space: pre-wrap;
           max-height: 50vh; overflow: auto; background: #000; padding: .6rem; border-radius: .4rem; }
+  textarea { width: 100%; min-height: 16rem; background: #000; color: #cfe; font-family: ui-monospace, monospace; font-size: .8rem; }
+  input[type=text] { width: 100%; padding: .5rem; font-family: ui-monospace, monospace; }
   .lvl { display: inline-block; width: 5rem; color: #9cf; }
   .Warning { color: #f1c40f; } .Error, .Fatal { color: #e74c3c; }
+  .muted { color: #888; font-size: .85rem; }
   .filters button { margin-right: .3rem; }
   footer { padding: .6rem 1rem; color: #888; font-size: .8rem; }
 </style>
@@ -31,55 +39,202 @@
   <span class="badge">Imprimante : <span id="printer">…</span></span>
   <span class="badge" id="freshness">MAJ…</span>
 </header>
+<nav>
+  <button data-tab="dashboard" class="active">Dashboard</button>
+  <button data-tab="logs">Logs</button>
+  <button data-tab="printer">Imprimante</button>
+  <button data-tab="config">Config</button>
+  <button data-tab="actions">Actions</button>
+  <button data-tab="console">Console</button>
+</nav>
 <main>
-  <div class="card" id="lastprint-card">
-    <h2>Dernière impression</h2>
-    <div id="lastprint">Aucune impression.</div>
-  </div>
-  <div class="card">
-    <h2>Logs</h2>
-    <div class="filters">
-      <button data-f="All">Tous</button>
-      <button data-f="Information">Info</button>
-      <button data-f="Warning">Warning</button>
-      <button data-f="Error">Error</button>
+  <section class="tab active" id="tab-dashboard">
+    <div class="card" id="lastprint-card">
+      <h2>Dernière impression</h2>
+      <div id="lastprint">Aucune impression.</div>
     </div>
-    <div id="logs">…</div>
-  </div>
+  </section>
+
+  <section class="tab" id="tab-logs">
+    <div class="card">
+      <h2>Logs <span class="muted" id="logmode">(polling)</span></h2>
+      <div class="filters">
+        <button data-f="All">Tous</button>
+        <button data-f="Information">Info</button>
+        <button data-f="Warning">Warning</button>
+        <button data-f="Error">Error</button>
+      </div>
+      <div id="logs">…</div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-printer">
+    <div class="card">
+      <h2>État imprimante <span class="muted">(modifs runtime — temporaires, réinitialisées au reboot)</span></h2>
+      <div id="printer-badges"></div>
+      <button class="act" data-printer="enable">Réactiver (cupsenable)</button>
+      <button class="act" data-printer="accept">Accepter (cupsaccept)</button>
+      <button class="act" data-printer="test">Test d'impression</button>
+      <button class="act" data-printer="purge">Purger la file</button>
+      <button class="act" data-printer="usb">Détecter USB (lpinfo)</button>
+      <pre id="printer-out">…</pre>
+    </div>
+    <div class="card">
+      <h2>File CUPS (lpq)</h2><pre id="printer-queue">—</pre>
+      <h2>Logs CUPS (error_log)</h2><pre id="printer-cupslog">—</pre>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-config">
+    <div class="card">
+      <h2>Config (photobooth.json)</h2>
+      <p class="muted">Édition de la config opérateur. « Appliquer » valide, écrit le fichier puis <strong>redémarre la borne</strong>.</p>
+      <textarea id="config-text" spellcheck="false"></textarea>
+      <div><button class="act" id="config-apply">Appliquer + redémarrer</button></div>
+      <div id="config-msg" class="muted"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-actions">
+    <div class="card">
+      <h2>Actions</h2>
+      <button class="act" data-action="recover-gopro">Reprise GoPro</button>
+      <button class="act" data-action="restart">Redémarrer l'app</button>
+      <button class="act danger" data-action="reboot">Redémarrer la borne</button>
+      <pre id="actions-out">—</pre>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-console">
+    <div class="card">
+      <h2>Console <span class="muted">(exécutée en pi ; sudo NOPASSWD disponible)</span></h2>
+      <input type="text" id="console-cmd" placeholder="ex: sudo systemctl status photobooth --no-pager">
+      <div><button class="act" id="console-run">Exécuter</button></div>
+      <pre id="console-out">—</pre>
+    </div>
+  </section>
 </main>
 <footer><span id="version"></span> · <span id="time"></span></footer>
 <script>
-  let filter = "All", lastLines = [];
+  let filter = "All", lastLines = [], csrf = "", live = null;
+
   function dot(v){ return v === true ? "ok" : v === false ? "ko" : "unknown"; }
+  function $(id){ return document.getElementById(id); }
+
+  async function getCsrf(){
+    try { csrf = (await (await fetch("/api/csrf")).json()).token || ""; } catch (e) { csrf = ""; }
+  }
+  async function send(method, url, body){
+    const opt = { method, headers: { "X-Admin-CSRF": csrf } };
+    if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = body; }
+    const res = await fetch(url, opt);
+    let data = null; try { data = await res.json(); } catch (e) {}
+    return { ok: res.ok, status: res.status, data };
+  }
+  const post = (url, body) => send("POST", url, body);
+  const put  = (url, body) => send("PUT", url, body);
+
+  // --- onglets ---
+  document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $("tab-" + b.dataset.tab).classList.add("active");
+    if (b.dataset.tab === "printer") refreshPrinter();
+    if (b.dataset.tab === "config") loadConfig();
+  });
+
+  // --- dashboard + logs ---
   async function refresh(){
     try {
       const s = await (await fetch("/api/status")).json();
-      document.getElementById("state").textContent = s.state;
-      document.getElementById("gopro").className = "dot " + dot(s.goProReachable);
-      document.getElementById("printer").textContent = s.printer.enabled ? s.printer.type : "désactivée";
-      const lp = document.getElementById("lastprint"), card = document.getElementById("lastprint-card");
+      $("state").textContent = s.state;
+      $("gopro").className = "dot " + dot(s.goProReachable);
+      $("printer").textContent = s.printer.enabled ? s.printer.type : "désactivée";
+      const lp = $("lastprint"), card = $("lastprint-card");
       if (!s.lastPrint) { lp.textContent = "Aucune impression."; card.className = "card"; }
       else if (s.lastPrint.succeeded) { lp.textContent = "OK — " + s.lastPrint.at; card.className = "card ok-print"; }
       else { lp.textContent = "ÉCHEC — " + (s.lastPrint.reason || "") + " (" + s.lastPrint.at + ")"; card.className = "card fail"; }
-      document.getElementById("version").textContent = "v" + s.version;
-      document.getElementById("time").textContent = s.serverTimeUtc;
-      lastLines = await (await fetch("/api/logs")).json();
-      renderLogs();
-      document.getElementById("freshness").textContent = "MAJ OK";
-    } catch (e) {
-      document.getElementById("freshness").textContent = "hôte injoignable";
-    }
+      $("version").textContent = "v" + s.version;
+      $("time").textContent = s.serverTimeUtc;
+      if (!live) { lastLines = await (await fetch("/api/logs")).json(); renderLogs(); }
+      $("freshness").textContent = "MAJ OK";
+    } catch (e) { $("freshness").textContent = "hôte injoignable"; }
   }
   function renderLogs(){
-    const box = document.getElementById("logs");
-    const rows = lastLines.filter(l => filter === "All" || l.level === filter)
-      .map(l => '<div><span class="lvl ' + l.level + '">' + l.level + '</span>' +
-                l.message + (l.exception ? "\n" + l.exception : "") + '</div>').join("");
-    box.innerHTML = rows; box.scrollTop = box.scrollHeight;
+    const box = $("logs");
+    box.replaceChildren();
+    lastLines.filter(l => filter === "All" || l.level === filter).forEach(l => {
+      const row = document.createElement("div");
+      const lvl = document.createElement("span");
+      lvl.className = "lvl " + l.level; lvl.textContent = l.level;
+      row.appendChild(lvl);
+      row.appendChild(document.createTextNode(l.message + (l.exception ? "\n" + l.exception : "")));
+      box.appendChild(row);
+    });
+    box.scrollTop = box.scrollHeight;
   }
-  document.querySelectorAll(".filters button").forEach(b =>
-    b.onclick = () => { filter = b.dataset.f; renderLogs(); });
-  refresh(); setInterval(refresh, 3000);
+  document.querySelectorAll(".filters button").forEach(b => b.onclick = () => { filter = b.dataset.f; renderLogs(); });
+
+  function startLive(){
+    try {
+      live = new EventSource("/api/logs/stream");
+      live.onopen = () => { lastLines = []; }; // le snapshot initial du flux fait foi (évite les doublons du poll)
+      live.onmessage = ev => { try { lastLines.push(JSON.parse(ev.data)); if (lastLines.length > 500) lastLines.shift(); renderLogs(); } catch (e) {} };
+      live.onerror = () => { if (live) { live.close(); live = null; $("logmode").textContent = "(polling)"; } };
+      $("logmode").textContent = "(live)";
+    } catch (e) { live = null; }
+  }
+
+  // --- imprimante ---
+  function setText(id, r){ $(id).textContent = r ? ((r.exitCode === 0 ? "OK" : "exit " + r.exitCode) + (r.timedOut ? " [timeout]" : "") + "\n" + (r.stdout || "") + (r.stderr ? "\n" + r.stderr : "")) : "—"; }
+  async function refreshPrinter(){
+    try {
+      const d = await (await fetch("/api/printer")).json();
+      const b = $("printer-badges"); b.replaceChildren();
+      [["enabled", d.enabled], ["accepting", d.accepting]].forEach(([k, v]) => {
+        const s = document.createElement("span"); s.className = "badge"; s.textContent = k + " : " + (v === null ? "?" : v); b.appendChild(s);
+      });
+      const pre = $("printer-out"); pre.textContent = d.raw || "";
+      $("printer-queue").textContent = (await (await fetch("/api/printer/queue")).json()).stdout || "—";
+      $("printer-cupslog").textContent = (await (await fetch("/api/printer/cups-log")).json()).stdout || "—";
+    } catch (e) { $("printer-out").textContent = "indisponible"; }
+  }
+  document.querySelectorAll("[data-printer]").forEach(b => b.onclick = async () => {
+    const a = b.dataset.printer;
+    if (a === "usb") { const r = await (await fetch("/api/printer/usb")).json(); setText("printer-out", r); return; }
+    const r = await post("/api/printer/" + a);
+    setText("printer-out", r.data); refreshPrinter();
+  });
+
+  // --- config ---
+  async function loadConfig(){
+    try { $("config-text").value = await (await fetch("/api/config")).text(); $("config-msg").textContent = ""; }
+    catch (e) { $("config-msg").textContent = "lecture impossible"; }
+  }
+  $("config-apply").onclick = async () => {
+    $("config-msg").textContent = "validation…";
+    const r = await put("/api/config", $("config-text").value);
+    if (r.status === 400) { $("config-msg").textContent = "Refusé : " + (r.data && r.data.error || "config invalide"); return; }
+    $("config-msg").textContent = "Appliqué — redémarrage en cours…";
+  };
+
+  // --- actions ---
+  document.querySelectorAll("[data-action]").forEach(b => b.onclick = async () => {
+    const r = await post("/api/actions/" + b.dataset.action);
+    $("actions-out").textContent = r.ok ? JSON.stringify(r.data) : ("échec (" + r.status + ")");
+  });
+
+  // --- console ---
+  $("console-run").onclick = async () => {
+    const cmd = $("console-cmd").value;
+    if (!cmd) return;
+    $("console-out").textContent = "…";
+    const r = await post("/api/console", JSON.stringify({ command: cmd }));
+    setText("console-out", r.data);
+  };
+
+  (async () => { await getCsrf(); await refresh(); startLive(); setInterval(refresh, 3000); })();
 </script>
 </body>
 </html>
