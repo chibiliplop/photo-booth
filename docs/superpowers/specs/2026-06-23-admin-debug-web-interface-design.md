@@ -74,7 +74,7 @@ Nouveau projet **`Photobooth.Admin`** (lib, `net8.0`, `<FrameworkReference Inclu
 
 | Composant | Projet | Rôle |
 |---|---|---|
-| `AdminOptions` | Core | Section `Admin` : `Enabled` (false), `Exposure` (`ap`), `Pin` (""), `ApSsid`, `ApPassword`, `Port` (8080), `ApAddress` (192.168.50.1), `Subnet`. Méthode `Validate()`. |
+| `AdminOptions` | Core | Section `Admin` : `Enabled` (false), `Exposure` (`ap`), `Pin` ("", optionnel), `ApSsid`, `ApPassword`, `Port` (8080), `ApAddress` (192.168.50.1), `Subnet`, `PersistLogsToFat` (false, Phase 2). Méthode `Validate()`. |
 | `BoothTelemetry` (singleton) | Core | État vivant : `BoothState`, dernier `SetStatus` (texte+niveau+horodatage), GoPro joignable (dernier keepalive OK), imprimante (type/activée), **dernière raison d'échec impression**, dernière capture, URL/IP admin. |
 | `InMemoryLogSink` | Adapters | Sink Serilog : ring buffer des N derniers events + flux live (Server-Sent Events). |
 | `AdminWebHost` | Photobooth.Admin | Démarre/arrête Kestrel ; mappe les endpoints ; bind selon `Exposure`. |
@@ -140,7 +140,7 @@ Privilèges : `lpstat`/`lpinfo`/`lp`/`lpq` en user app ; `cupsenable`/`cupsaccep
 ## 12. Phasage
 
 - **Phase 1 — valeur immédiate, zéro matériel** : `Photobooth.Admin` + `BoothTelemetry` + `InMemoryLogSink` + tous les onglets (dashboard, logs, **imprimante**, config, actions, console), accessibles en `Exposure=gopro`. Capture de la vraie raison d'échec impression (`PhotoboothWorkflow.cs:348`).
-- **Phase 2 — mode AP dédié** : `photobooth-admin-ap.service` + script (ap0/hostapd/dnsmasq), avahi/mDNS, overlay boot + dismiss, `Exposure=ap`/`both`, sudoers + privilèges.
+- **Phase 2 — mode AP dédié** : `photobooth-admin-ap.service` + script (ap0/hostapd/dnsmasq), avahi/mDNS, overlay boot + dismiss, `Exposure=ap`/`both`, sudoers + privilèges, **persistance optionnelle des logs sur FAT32** (`Admin.PersistLogsToFat`, défaut `false`).
 
 Chaque phase a son propre plan d'implémentation.
 
@@ -158,6 +158,6 @@ Architecture 2 couches (RUNBOOK §0/§3, `deploy/README.md`) : root ext4 **figé
 1. **Écriture config** : `photobooth.json` est sur la FAT32 → les écritures **persistent**. Mais la FAT32 est montée **root** et l'app est `pi` → écriture **via chemin privilégié** (helper root en liste blanche sudoers), en **atomique** (temp + rename) pour résister à une coupure secteur (FAT n'a pas de journal).
 2. **Artefacts système de la feature** (`photobooth-admin-ap.sh`, `photobooth-admin-ap.service`, fichier sudoers, confs hostapd/dnsmasq, conf avahi) → **bakés dans l'image** via `image-builder/scripts/00-photobooth.sh` + versionnés dans `deploy/`. **Jamais créés au runtime** (sinon perdus au reboot). Pattern identique au provisioning existant.
 3. **Changements runtime éphémères** (par design overlay) : `cupsenable`/`cupsaccept`/`lpadmin` depuis l'onglet imprimante sont réinitialisés au reboot (raison d'être de `photobooth-printer.service` qui recrée la file à chaque boot). L'UI doit indiquer « temporaire » ; un correctif durable passe par la config FAT32 ou l'image.
-4. **Logs** : Serilog écrit dans `/home/pi/photobooth/logs/` (overlay) et journald est probablement en RAM → **perdus au reboot**. Le buffer mémoire (`InMemoryLogSink`) est volatil aussi. Pour débuguer un crash **après reboot**, prévoir une option d'écriture des logs debug sur la **FAT32** (hors overlay).
+4. **Logs** : Serilog écrit dans `/home/pi/photobooth/logs/` (overlay) et journald est probablement en RAM → **perdus au reboot**. Le buffer mémoire (`InMemoryLogSink`) est volatil aussi. Pour débuguer un crash **après reboot**, écriture optionnelle des logs sur la **FAT32** (hors overlay) — **Phase 2**, flag `Admin.PersistLogsToFat` (**défaut `false`** : si désactivé, aucun log n'est écrit sur la FAT32).
 5. **Flags & params** (`Admin.Enabled`, SSID/mot de passe AP) dans `photobooth.json` (FAT32) → persistent, éditables, lus par le script boot comme `wifi.txt`.
 6. **Dev vs dist** : l'image **dev** (`PHOTOBOOTH_OVERLAY=0`, root inscriptible) permet de développer/tester toute la **Phase 1** sans ces contraintes ; elles ne s'appliquent qu'à l'image **dist** et à la Phase 2.
