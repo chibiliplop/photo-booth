@@ -2,7 +2,7 @@
 
 - **Date** : 2026-06-23
 - **Branche cible** : `feat/printer` (la feature impression et ses messages — dont « Impression impossible » — y vivent)
-- **Statut** : design validé. **Phase 1 découpée en 3 plans ; Plan 1/3 « socle d'observabilité » implémenté le 2026-06-23** (`BoothTelemetry`, `InMemoryLogSink`, capture de la vraie raison d'échec d'impression) — commits `e74185e..3cefad8`, 34/34 tests verts. Reste : hôte web Kestrel + endpoints + UI (Plans 2/3 et 3/3) et mode AP (Phase 2). Voir `docs/superpowers/plans/2026-06-23-admin-debug-phase1-observability-core.md`.
+- **Statut** : design validé. **Phase 1 découpée en 3 plans ; Plan 1/3 « socle d'observabilité » implémenté le 2026-06-23** (`BoothTelemetry`, `InMemoryLogSink`, capture de la vraie raison d'échec d'impression) — commits `e74185e..3cefad8`, 34/34 tests verts. Reste : hôte web Kestrel + endpoints + UI (Plans 2/3 et 3/3) et mode AP (Phase 2). Voir `docs/superpowers/plans/2026-06-23-admin-debug-phase1-observability-core.md`. **Plan 2/3 (visualiseur lecture seule) livré ; Plan 3/3 (read-write : actions imprimante, config, console root, CUPS, logs SSE + sudoers/provisioning) en cours de planification — il introduit une dérogation read-write au modèle de sécurité (voir §3, D8/D9, §10).**
 
 ## 1. Contexte & problème
 
@@ -30,16 +30,18 @@ D'après `src/Photobooth.Core/Options/GoProOptions.cs` (`ControlBaseUrl=http://1
 | D3 | Exposition réseau | Configurable : `ap` \| `gopro` \| `both` |
 | D4 | Mode `ap` | AP+STA concurrent (`ap0` virtuel + hostapd + dnsmasq), **opt-in, `false` par défaut** |
 | D5 | Découverte d'IP | mDNS (`photobooth.local`) **+** overlay boot affichant l'URL/IP, **dismiss au 1er appui bouton** puis caché en usage normal |
-| D6 | Auth | Mot de passe AP uniquement ; **PIN optionnel** (`Admin.Pin`) recommandé si exposition `gopro`/`both` |
+| D6 | Auth | Mot de passe AP ; **PIN (`Admin.Pin`)** = *seule* frontière réseau↔root en `gopro`/`both` (voir D8/D9). Reste techniquement optionnel : si vide + `Enabled`, l'hôte démarre quand même avec **warning bruyant** et surface complète exposée (dérogation read-write 2026-06-23). |
 | D7 | Application config | Écrit `photobooth.json` (sur la FAT32, **via chemin privilégié** car app non-root, écriture **atomique** temp+rename) puis **restart du service `photobooth`** (pas reboot système). Voir §14. |
-| D8 | Console | Commande **one-shot arbitraire**, sortie streamée, exécutée en **utilisateur app (non-root)**, timeout + kill |
-| D9 | Privilèges | Actions système **et écriture config FAT32** via **sudoers en liste blanche** ; jamais de shell root |
+| D8 | Console | Commande **one-shot arbitraire**, sortie streamée, timeout + kill. ~~user app non-root~~ → **exécutée en `pi` avec `sudo` NOPASSWD: ALL disponible** = console root de fait (dérogation read-write 2026-06-23, écrase le « non-root » initial). |
+| D9 | Privilèges | ~~sudoers liste blanche ; jamais de shell root~~ → **`pi ALL=(ALL) NOPASSWD: ALL`** (liste blanche **abandonnée**). Actions système + écriture config FAT32 + console passent toutes par `sudo` sans mot de passe (dérogation read-write 2026-06-23). |
 | D10 | Flag maître | `Admin.Enabled` (défaut `false`), lu par la couche réseau (script boot) **et** par l'app |
 | D11 | Robustesse | Tout échec du bloc admin (AP qui ne monte pas, avahi absent, commande KO) est **dégradé, jamais fatal** |
 
 ### Sécurité — note explicite
 
 En mode `gopro`/`both`, la frontière de confiance s'élargit : *quiconque a la clé WiFi de la GoPro* peut administrer/rebooter la borne et ouvrir la console (RCE). Mitigation : `Admin.Pin` (si non vide, exigé avant tout accès) **recommandé** pour ces modes. En mode `ap` seul, la clé WPA2 de l'AP dédié (opt-in) suffit ; l'AP **doit** avoir un mot de passe fort.
+
+> **Dérogation read-write (2026-06-23, Plan 3/3)** — l'introduction des écritures, des actions privilégiées et de la console change le modèle de menace. Décisions actées (voir D8/D9) : privilège = **`NOPASSWD: ALL`** pour `pi`, liste blanche **abandonnée** ; la console est donc un **root shell distant**. Le **PIN est l'unique frontière** entre le WiFi GoPro et root. Conséquence assumée : si `Enabled && Pin==""`, l'hôte logge un **warning** mais expose **tout** (root anonyme sur le LAN GoPro — risque accepté). Durcissement compensatoire **obligatoire** côté Plan 3/3 : échappement de sortie (`textContent`, fin du compromis XSS read-only du 2/3), **CSRF** sur tout endpoint mutant, cookie login `SameSite=Strict`, **audit-log** de chaque action et commande console.
 
 ## 4. Architecture — trois couches
 
@@ -129,8 +131,8 @@ Privilèges : `lpstat`/`lpinfo`/`lp`/`lpq` en user app ; `cupsenable`/`cupsaccep
 ## 10. Sécurité (récap)
 
 - Kestrel **jamais** sur wlan0 sauf `Exposure` = `gopro`/`both` explicite.
-- `Admin.Pin` (si non vide) exigé avant tout accès ; recommandé pour `gopro`/`both`.
-- sudoers : **liste blanche stricte** de commandes complètes, pas de wildcard, pas de shell root.
+- `Admin.Pin` (si non vide) exigé avant tout accès ; **seule frontière réseau↔root** en `gopro`/`both` (voir dérogation §3). Si vide + `Enabled` : warning + surface complète exposée.
+- ~~sudoers liste blanche~~ → **`pi ALL=(ALL) NOPASSWD: ALL`** (dérogation read-write 2026-06-23). Durcissement compensatoire obligatoire : sortie échappée (`textContent`), CSRF sur tout endpoint mutant, cookie `SameSite=Strict`, audit-log de chaque action/commande.
 - Tout le bloc `false` par défaut → aucune surface d'attaque en prod tant qu'admin n'est pas activé.
 
 ## 11. Tests
@@ -141,8 +143,8 @@ Privilèges : `lpstat`/`lpinfo`/`lp`/`lpq` en user app ; `cupsenable`/`cupsaccep
 
 ## 12. Phasage
 
-- **Phase 1 — valeur immédiate, zéro matériel** : `Photobooth.Admin` + `BoothTelemetry` + `InMemoryLogSink` + tous les onglets (dashboard, logs, **imprimante**, config, actions, console), accessibles en `Exposure=gopro`. Capture de la vraie raison d'échec impression (`PhotoboothWorkflow.cs:348`).
-- **Phase 2 — mode AP dédié** : `photobooth-admin-ap.service` + script (ap0/hostapd/dnsmasq), avahi/mDNS, overlay boot + dismiss, `Exposure=ap`/`both`, sudoers + privilèges, **persistance optionnelle des logs sur FAT32** (`Admin.PersistLogsToFat`, défaut `false`).
+- **Phase 1 — valeur immédiate, zéro matériel** : `Photobooth.Admin` + `BoothTelemetry` + `InMemoryLogSink` + tous les onglets (dashboard, logs, **imprimante**, config, actions, console), accessibles en `Exposure=gopro`. Capture de la vraie raison d'échec impression (`PhotoboothWorkflow.cs:348`). **Inclut désormais (Plan 3/3) le câblage privilèges** : `/etc/sudoers.d/photobooth` (`NOPASSWD: ALL`), helper root d'écriture config atomique, provisioning dans `image-builder/scripts/00-photobooth.sh` — **remontés ici depuis la Phase 2** pour que config-apply/restart/reboot fonctionnent dès la fin de Phase 1.
+- **Phase 2 — mode AP dédié** : `photobooth-admin-ap.service` + script (ap0/hostapd/dnsmasq), avahi/mDNS, overlay boot + dismiss, `Exposure=ap`/`both`, **persistance optionnelle des logs sur FAT32** (`Admin.PersistLogsToFat`, défaut `false`). *(sudoers/privilèges remontés en Phase 1 — voir ci-dessus.)*
 
 Chaque phase a son propre plan d'implémentation.
 
