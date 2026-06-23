@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> ✅ **Implémenté le 2026-06-23** sur `feat/printer` — commits `e74185e..3cefad8` (les 3 tâches). Revue par tâche (spec + qualité) puis revue de branche : OK, 0 finding Critical/Important. `dotnet test` : **34/34 vert**.
+
 **Goal:** Capturer dans l'app la vraie raison d'un échec d'impression (aujourd'hui avalée) et garder en RAM un tampon des derniers logs, comme fondation lecture de la future UI d'admin.
 
 **Architecture:** Un singleton `BoothTelemetry` (modèle pur, thread-safe) dans `Photobooth.Core`, alimenté par le workflow au point exact où l'exception d'impression était jusqu'ici seulement logguée puis remplacée par un « Impression impossible » générique (`PhotoboothWorkflow.cs`). Un sink Serilog `InMemoryLogSink` (ring buffer) dans un nouveau projet `Photobooth.Admin`, branché sur le pipeline Serilog existant de `Program.cs`. Aucune UI, aucun serveur web dans ce plan.
@@ -53,7 +55,7 @@
     - `void RecordPrintSuccess()`
   - `Photobooth.Core.Diagnostics.PrintResult(bool Succeeded, string? Reason, DateTimeOffset At)` (record).
 
-- [ ] **Step 1 : Écrire les tests qui échouent**
+- [x] **Step 1 : Écrire les tests qui échouent**
 
 Créer `src/Photobooth.Tests/BoothTelemetryTests.cs` :
 
@@ -97,12 +99,12 @@ public class BoothTelemetryTests
 }
 ```
 
-- [ ] **Step 2 : Lancer le test pour vérifier qu'il échoue**
+- [x] **Step 2 : Lancer le test pour vérifier qu'il échoue**
 
 Run: `dotnet test --filter "FullyQualifiedName~BoothTelemetryTests"`
 Expected: ÉCHEC de compilation — `The type or namespace name 'Diagnostics' does not exist` / `BoothTelemetry` introuvable.
 
-- [ ] **Step 3 : Écrire l'implémentation minimale**
+- [x] **Step 3 : Écrire l'implémentation minimale**
 
 Créer `src/Photobooth.Core/Diagnostics/BoothTelemetry.cs` :
 
@@ -144,12 +146,12 @@ public sealed class BoothTelemetry
 public sealed record PrintResult(bool Succeeded, string? Reason, DateTimeOffset At);
 ```
 
-- [ ] **Step 4 : Lancer le test pour vérifier qu'il passe**
+- [x] **Step 4 : Lancer le test pour vérifier qu'il passe**
 
 Run: `dotnet test --filter "FullyQualifiedName~BoothTelemetryTests"`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5 : Commit**
+- [x] **Step 5 : Commit**
 
 ```bash
 git add src/Photobooth.Core/Diagnostics/BoothTelemetry.cs src/Photobooth.Tests/BoothTelemetryTests.cs
@@ -173,7 +175,7 @@ git commit -m "$(printf 'feat(telemetry): BoothTelemetry capture le résultat de
   - `TestHarness.Rig` gagne un membre `BoothTelemetry Telemetry`.
   - `RecordingPrinter` gagne `bool ThrowOnPrint { get; set; }`.
 
-- [ ] **Step 1 : Écrire le test d'intégration qui échoue**
+- [x] **Step 1 : Écrire le test d'intégration qui échoue**
 
 Créer `src/Photobooth.Tests/PrintTelemetryTests.cs` :
 
@@ -216,12 +218,12 @@ public class PrintTelemetryTests
 }
 ```
 
-- [ ] **Step 2 : Lancer le test pour vérifier qu'il échoue**
+- [x] **Step 2 : Lancer le test pour vérifier qu'il échoue**
 
 Run: `dotnet test --filter "FullyQualifiedName~PrintTelemetryTests"`
 Expected: ÉCHEC de compilation — `'TestHarness.Rig' does not contain a definition for 'Telemetry'` et `'RecordingPrinter' does not contain a definition for 'ThrowOnPrint'`.
 
-- [ ] **Step 3a : Étendre `RecordingPrinter` et `Rig` dans TestSupport.cs**
+- [x] **Step 3a : Étendre `RecordingPrinter` et `Rig` dans TestSupport.cs**
 
 Dans `src/Photobooth.Tests/TestSupport.cs`, ajouter l'import en tête (après les autres `using`) :
 
@@ -270,7 +272,7 @@ Dans `TestHarness.Build`, remplacer le bloc de construction du workflow (créati
         return new Rig(wf, display, light, gopro, printer, telemetry);
 ```
 
-- [ ] **Step 3b : Ajouter le paramètre `BoothTelemetry` au workflow**
+- [x] **Step 3b : Ajouter le paramètre `BoothTelemetry` au workflow**
 
 Dans `src/Photobooth.Core/Workflow/PhotoboothWorkflow.cs`, ajouter l'import (avec les autres `using Photobooth.Core.*`) :
 
@@ -305,7 +307,7 @@ Et dans le corps du constructeur, ajouter juste après `_printer = printer;` :
         _telemetry = telemetry;
 ```
 
-- [ ] **Step 3c : Enregistrer le résultat d'impression dans `PrintLastPhotoAsync`**
+- [x] **Step 3c : Enregistrer le résultat d'impression dans `PrintLastPhotoAsync`**
 
 Toujours dans `PhotoboothWorkflow.cs`, remplacer le bloc `try/catch` de `PrintLastPhotoAsync` par :
 
@@ -330,7 +332,7 @@ Toujours dans `PhotoboothWorkflow.cs`, remplacer le bloc `try/catch` de `PrintLa
 
 > Note : un timeout du watchdog (`OperationCanceledException` non issue de `lifetime`) tombe dans le `catch (Exception)` générique — sa raison est donc aussi capturée (« The operation was canceled. »), ce qui couvre le cas « impression trop lente ».
 
-- [ ] **Step 3d : Enregistrer `BoothTelemetry` en DI**
+- [x] **Step 3d : Enregistrer `BoothTelemetry` en DI**
 
 Dans `src/Photobooth.App/Composition/ServiceConfiguration.cs`, ajouter l'import (avec les autres `using Photobooth.Core.*`) :
 
@@ -344,7 +346,7 @@ Ajouter l'enregistrement juste avant `services.AddSingleton<PhotoboothWorkflow>(
         services.AddSingleton<BoothTelemetry>();
 ```
 
-- [ ] **Step 4 : Lancer les tests (ciblé puis complet)**
+- [x] **Step 4 : Lancer les tests (ciblé puis complet)**
 
 Run: `dotnet test --filter "FullyQualifiedName~PrintTelemetryTests"`
 Expected: PASS (1 test).
@@ -352,7 +354,7 @@ Expected: PASS (1 test).
 Run: `dotnet test`
 Expected: PASS — toute la suite existante reste verte (le changement de constructeur est absorbé par `TestHarness.Build` et la DI).
 
-- [ ] **Step 5 : Commit**
+- [x] **Step 5 : Commit**
 
 ```bash
 git add src/Photobooth.Core/Workflow/PhotoboothWorkflow.cs src/Photobooth.App/Composition/ServiceConfiguration.cs src/Photobooth.Tests/TestSupport.cs src/Photobooth.Tests/PrintTelemetryTests.cs
@@ -380,7 +382,7 @@ git commit -m "$(printf 'fix(printer): capturer la vraie raison d_échec dans Bo
     - `IReadOnlyList<LogLine> Snapshot()` (du plus ancien au plus récent)
   - `Photobooth.Admin.LogLine(DateTimeOffset Timestamp, string Level, string Message, string? Exception)` (record).
 
-- [ ] **Step 1 : Créer le projet Photobooth.Admin et l'ajouter à la solution**
+- [x] **Step 1 : Créer le projet Photobooth.Admin et l'ajouter à la solution**
 
 Créer `src/Photobooth.Admin/Photobooth.Admin.csproj` :
 
@@ -404,7 +406,7 @@ Puis :
 dotnet sln Photobooth.sln add src/Photobooth.Admin/Photobooth.Admin.csproj
 ```
 
-- [ ] **Step 2 : Écrire les tests qui échouent**
+- [x] **Step 2 : Écrire les tests qui échouent**
 
 D'abord rendre `Photobooth.Admin` + Serilog visibles depuis les tests. Dans `src/Photobooth.Tests/Photobooth.Tests.csproj` :
 
@@ -473,12 +475,12 @@ public class InMemoryLogSinkTests
 }
 ```
 
-- [ ] **Step 3 : Lancer les tests pour vérifier qu'ils échouent**
+- [x] **Step 3 : Lancer les tests pour vérifier qu'ils échouent**
 
 Run: `dotnet test --filter "FullyQualifiedName~InMemoryLogSinkTests"`
 Expected: ÉCHEC de compilation — `InMemoryLogSink` introuvable.
 
-- [ ] **Step 4 : Écrire l'implémentation du sink**
+- [x] **Step 4 : Écrire l'implémentation du sink**
 
 Créer `src/Photobooth.Admin/InMemoryLogSink.cs` :
 
@@ -534,12 +536,12 @@ public sealed record LogLine(
     string? Exception);
 ```
 
-- [ ] **Step 5 : Lancer les tests pour vérifier qu'ils passent**
+- [x] **Step 5 : Lancer les tests pour vérifier qu'ils passent**
 
 Run: `dotnet test --filter "FullyQualifiedName~InMemoryLogSinkTests"`
 Expected: PASS (3 tests).
 
-- [ ] **Step 6 : Brancher le sink sur Serilog et la DI dans l'app**
+- [x] **Step 6 : Brancher le sink sur Serilog et la DI dans l'app**
 
 Dans `src/Photobooth.App/Photobooth.App.csproj`, ajouter dans le `ItemGroup` des `ProjectReference` :
 
@@ -581,7 +583,7 @@ Toujours dans `Main`, juste après `sc.AddPhotobooth(config);`, ajouter :
             sc.AddSingleton(logBuffer);
 ```
 
-- [ ] **Step 7 : Vérifier la compilation et la non-régression**
+- [x] **Step 7 : Vérifier la compilation et la non-régression**
 
 Run: `dotnet build Photobooth.sln`
 Expected: Build succeeded, 0 erreurs.
@@ -589,7 +591,7 @@ Expected: Build succeeded, 0 erreurs.
 Run: `dotnet test`
 Expected: PASS — toute la suite (existante + nouvelle) verte.
 
-- [ ] **Step 8 : Commit**
+- [x] **Step 8 : Commit**
 
 ```bash
 git add src/Photobooth.Admin/ src/Photobooth.App/Photobooth.App.csproj src/Photobooth.App/Program.cs src/Photobooth.Tests/Photobooth.Tests.csproj src/Photobooth.Tests/InMemoryLogSinkTests.cs Photobooth.sln

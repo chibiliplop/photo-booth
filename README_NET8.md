@@ -18,10 +18,11 @@ Réécriture cross-platform (Linux / Windows / macOS, cible **Raspberry Pi 3**) 
 
 | Projet | Rôle |
 | --- | --- |
-| `Photobooth.Core` | Logique pure : interfaces, workflow « acteur » (états Idle/Capturing/Recording/Degraded), options, modèles GoPro JSON, retry borné. Aucune dépendance UI/hardware. |
+| `Photobooth.Core` | Logique pure : interfaces, workflow « acteur » (états Idle/Capturing/Recording/Degraded), options, modèles GoPro JSON, retry borné, télémétrie diagnostic (`Diagnostics/BoothTelemetry` : dernière raison d'échec d'impression). Aucune dépendance UI/hardware. |
 | `Photobooth.Adapters` | `HttpGoProClient` (HTTP/UDP réels) + `FakeGoProClient` ; GPIO/I2C Linux (`System.Device.Gpio`) + implémentations fake. |
+| `Photobooth.Admin` | Socle admin/debug embarqué : `InMemoryLogSink` (ring buffer Serilog des 500 derniers logs, lu en RAM). Destiné à accueillir le futur hôte web d'admin (voir `docs/superpowers/specs/`). Référencé par `Photobooth.App`. |
 | `Photobooth.App` | UI Avalonia (kiosk), composition root (DI + config + Serilog), `appsettings.json`, assets. |
-| `Photobooth.Tests` | Tests xUnit du workflow (pilotés par les fakes). |
+| `Photobooth.Tests` | Tests xUnit du workflow et du socle d'observabilité (pilotés par les fakes). |
 
 ## Pré-requis
 

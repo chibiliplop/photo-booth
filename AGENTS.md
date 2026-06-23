@@ -10,10 +10,11 @@ The current product goal is: use a Raspberry Pi and a GoPro as an event photoboo
 
 A cross-platform rewrite now lives alongside the UWP code in `src/` (solution `Photobooth.sln`), targeting Linux/Windows/macOS with the Raspberry Pi 3 as the primary deployment. **New work should go here, not in the UWP projects.**
 
-- `src/Photobooth.Core` — UI/hardware-free domain: interfaces, an actor-model `PhotoboothWorkflow` (states Idle/Capturing/Recording/Degraded), options, GoPro JSON models, bounded retry.
+- `src/Photobooth.Core` — UI/hardware-free domain: interfaces, an actor-model `PhotoboothWorkflow` (states Idle/Capturing/Recording/Degraded), options, GoPro JSON models, bounded retry, diagnostic telemetry (`Diagnostics/BoothTelemetry`: real last-print-failure reason).
 - `src/Photobooth.Adapters` — `HttpGoProClient`/`FakeGoProClient`; Linux GPIO/I2C (`System.Device.Gpio`) + fake hardware.
+- `src/Photobooth.Admin` — embedded admin/debug foundation: `InMemoryLogSink` (Serilog in-RAM ring buffer). Will host the future admin web host (see `docs/superpowers/specs/`). Referenced by `Photobooth.App`.
 - `src/Photobooth.App` — Avalonia kiosk UI + composition root (DI/config/Serilog) + `appsettings.json`.
-- `src/Photobooth.Tests` — xUnit workflow tests.
+- `src/Photobooth.Tests` — xUnit workflow + observability-core tests.
 
 Quick start, simulator, and screenshot mode: `README_NET8.md`. Pi deployment (manuel): `DEPLOY_RASPBERRY_PI.md`. Testing without a camera: `TESTING_WITHOUT_GOPRO.md`. The legacy UWP app below (`CS/`, `GoProWifi/`, `RasberryPiLib/`) is kept as reference and is unchanged.
 

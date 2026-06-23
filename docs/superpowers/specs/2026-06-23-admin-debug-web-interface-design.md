@@ -2,7 +2,7 @@
 
 - **Date** : 2026-06-23
 - **Branche cible** : `feat/printer` (la feature impression et ses messages — dont « Impression impossible » — y vivent)
-- **Statut** : design validé, en attente de revue avant plan d'implémentation
+- **Statut** : design validé. **Phase 1 découpée en 3 plans ; Plan 1/3 « socle d'observabilité » implémenté le 2026-06-23** (`BoothTelemetry`, `InMemoryLogSink`, capture de la vraie raison d'échec d'impression) — commits `e74185e..3cefad8`, 34/34 tests verts. Reste : hôte web Kestrel + endpoints + UI (Plans 2/3 et 3/3) et mode AP (Phase 2). Voir `docs/superpowers/plans/2026-06-23-admin-debug-phase1-observability-core.md`.
 
 ## 1. Contexte & problème
 
@@ -72,11 +72,13 @@ En mode `gopro`/`both`, la frontière de confiance s'élargit : *quiconque a la 
 
 Nouveau projet **`Photobooth.Admin`** (lib, `net8.0`, `<FrameworkReference Include="Microsoft.AspNetCore.App" />`), référencé par `Photobooth.App`. En publish self-contained linux-arm64, le runtime ASP.NET est embarqué → rien à installer sur le Pi.
 
+> **État d'implémentation (Plan 1/3, 2026-06-23)** : le projet `Photobooth.Admin` existe et contient pour l'instant **uniquement** `InMemoryLogSink` (réf. `Serilog` + `Photobooth.Core`). Le `FrameworkReference` ASP.NET et les composants `AdminWebHost` / `CommandConsoleService` / `PrivilegedActions` arrivent avec le plan de l'hôte web (2/3). `BoothTelemetry` est livré mais **réduit** au strict besoin du socle (résultat de la dernière impression) ; les autres champs ci-dessous sont planifiés.
+
 | Composant | Projet | Rôle |
 |---|---|---|
 | `AdminOptions` | Core | Section `Admin` : `Enabled` (false), `Exposure` (`ap`), `Pin` ("", optionnel), `ApSsid`, `ApPassword`, `Port` (8080), `ApAddress` (192.168.50.1), `Subnet`, `PersistLogsToFat` (false, Phase 2). Méthode `Validate()`. |
-| `BoothTelemetry` (singleton) | Core | État vivant : `BoothState`, dernier `SetStatus` (texte+niveau+horodatage), GoPro joignable (dernier keepalive OK), imprimante (type/activée), **dernière raison d'échec impression**, dernière capture, URL/IP admin. |
-| `InMemoryLogSink` | Adapters | Sink Serilog : ring buffer des N derniers events + flux live (Server-Sent Events). |
+| `BoothTelemetry` (singleton) ✅ *(partiel)* | Core | État vivant. **Livré Plan 1/3** : **dernière raison d'échec impression** (`LastPrint` : succès/échec + raison + horodatage). **Planifié** : `BoothState`, dernier `SetStatus` (texte+niveau+horodatage), GoPro joignable (dernier keepalive OK), imprimante (type/activée), dernière capture, URL/IP admin. |
+| `InMemoryLogSink` ✅ | **Photobooth.Admin** | Sink Serilog : ring buffer des 500 derniers events. **Livré Plan 1/3** (placé dans `Photobooth.Admin`, pas `Adapters` comme esquissé initialement). Flux live (Server-Sent Events) **planifié** avec l'hôte web. |
 | `AdminWebHost` | Photobooth.Admin | Démarre/arrête Kestrel ; mappe les endpoints ; bind selon `Exposure`. |
 | `CommandConsoleService` | Photobooth.Admin | Exécute `bash -c <cmd>` en user app, stream stdout/stderr (SSE), timeout + kill. |
 | `PrivilegedActions` | Photobooth.Admin | Invoque les commandes sudoers en liste blanche. |
