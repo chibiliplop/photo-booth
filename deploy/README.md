@@ -22,6 +22,8 @@ figé dans l'image SD par le mainteneur.
 | `boot-config/photobooth.json` | `/boot/firmware/photobooth/` | **modèle** thème (noms, année, fond, mode démo) |
 | `boot-config/LISEZ-MOI.txt` | `/boot/firmware/photobooth/` | notice opérateur (sur la carte) |
 | `boot-config/admin.txt` | `/boot/firmware/photobooth/` | **avancé** : override optionnel du mot de passe SSH `pi` (réappliqué au boot) |
+| `sudoers.d/photobooth` | `/etc/sudoers.d/photobooth` (`0440 root`) | **avancé** : `pi ALL=(ALL) NOPASSWD: ALL` — privilèges root de l'hôte web d'admin/debug (opt-in). Validé par `visudo -c` à l'install. |
+| `photobooth-write-config.sh` | `/usr/local/sbin/` (`0755`) | **avancé** : écriture atomique de `photobooth.json` sur la FAT32 root, appelée en `sudo` par l'hôte d'admin. |
 | `fond.jpg` (à ajouter) | `/boot/firmware/photobooth/` | image de fond modèle |
 
 ## Procédure complète
@@ -36,13 +38,15 @@ Le guide destiné à l'opérateur non-technique est
 > Actions), qui produit `photobooth-dist.img.xz` à partir de l'image Lite
 > officielle. C'est la source de vérité unique — ne rien dupliquer ailleurs.
 
-## ⚠️ Deux points de vigilance
+## ⚠️ Trois points de vigilance
 
-1. **Rendu logiciel** : en Avalonia 11, `--drm` (`StartLinuxDrm`) est *toujours*
+1. **Hôte web d'admin/debug** : `Photobooth.Admin` est **désactivé par défaut** (`Admin.Enabled=false` → rien n'écoute). Une fois activé (section `Admin` dans `photobooth.json`), il expose une console root via `sudo` gardée **uniquement** par `Admin.Pin` (+ CSRF/SameSite). Le `sudoers` ci-dessus accorde `NOPASSWD: ALL`. **Conséquence : n'activer que sur un réseau de confiance et toujours définir un PIN.** Détails : `../RUNBOOK_MAINTENEUR_CARTE_SD.md` §3.5.
+
+2. **Rendu logiciel** : en Avalonia 11, `--drm` (`StartLinuxDrm`) est *toujours*
    accéléré matériellement (GPU VC4), et `AVALONIA_RENDERER=software` est un
    **no-op** (vestige d'Avalonia 0.10). Le service force donc le GL logiciel au
    niveau Mesa (`LIBGL_ALWAYS_SOFTWARE=1` + `GALLIUM_DRIVER=llvmpipe`).
    **À valider sur le vrai Pi 3** ; repli garanti = backend FBDev. Détails dans le runbook.
-2. **Fins de ligne** : `photobooth-provision.sh` doit rester en **LF** (Unix), pas
+3. **Fins de ligne** : `photobooth-provision.sh` doit rester en **LF** (Unix), pas
    CRLF, sinon le `#!/bin/bash` casse. Les fichiers de `boot-config/` peuvent être
    en CRLF (le script et `System.Text.Json` les tolèrent).

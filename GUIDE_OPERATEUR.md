@@ -158,6 +158,18 @@ Souvent la GoPro s'est endormie ou la batterie est faible.
 
 > Règle d'or : **9 fois sur 10, éteindre/rallumer la GoPro ou débrancher/rebrancher la borne règle le problème.** Vous ne pouvez rien casser.
 
+### Interface de dépannage à distance (avancé — seulement si on vous le demande)
+
+La borne dispose d'une petite **page web de dépannage** que la personne qui l'entretient peut utiliser à distance. Elle est **éteinte par défaut** et vous n'en avez **pas besoin** pour un événement normal.
+
+Si votre mainteneur vous demande de l'activer, c'est une seule chose : dans `photobooth.json` (la même carte mémoire que les prénoms), ajoutez le bloc qu'il vous indique, **avec toujours un code PIN** :
+
+```
+  "Admin": { "Enabled": true, "Pin": "votre-code-ici" }
+```
+
+> ⚠️ **Toujours un PIN**, et seulement sur demande : cette page permet de piloter la borne. Ne l'activez pas « pour voir », et remettez `"Enabled": false` (ou retirez le bloc) une fois le dépannage terminé.
+
 ---
 
 ## Ranger / éteindre proprement

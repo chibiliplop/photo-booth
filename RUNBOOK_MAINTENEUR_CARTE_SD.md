@@ -310,6 +310,38 @@ sudo systemctl disable bluetooth hciuart ModemManager avahi-daemon triggerhappy 
 
 > `NetworkManager-wait-online` est important à désactiver : sans Internet (réseau GoPro), il ferait traîner le boot.
 
+### 3.5 — Interface web d'admin/debug (opt-in) + privilèges
+
+La borne embarque un hôte web d'admin/debug (`Photobooth.Admin`, Kestrel) pour le **dépannage terrain à distance** (sur le réseau WiFi de la GoPro). Il est **désactivé par défaut** — tant que `Admin.Enabled=false`, **rien n'écoute**.
+
+**Activer sur une borne déployée (sans rebuild)** : ajouter une section `Admin` au `photobooth.json` de la FAT32, puis rebrancher :
+
+```jsonc
+{
+  "Admin": {
+    "Enabled": true,
+    "Pin": "1234",        // OBLIGATOIRE en pratique : vide = aucune authentification
+    "Port": 8080,         // défaut 8080 ; sur l'IP du Pi (≠ 10.5.5.9 de la GoPro)
+    "ListenAddress": "0.0.0.0"
+  }
+}
+```
+
+Accès : `http://<ip-du-Pi>:<port>/` → login PIN → page à onglets. **Lecture** : logs live (SSE), état borne/imprimante. **Écriture** : actions imprimante/CUPS (`cupsenable`/`cupsaccept`/test/purge, `lpinfo`, `tail error_log`), édition de `photobooth.json` (valide → écrit → **redémarre la borne**), **console shell arbitraire**, restart/reboot, reprise GoPro.
+
+**Modèle de menace (dérogation read-write actée le 2026-06-23, voir le design §3/§10)** — le **PIN** (+ la clé WiFi GoPro) est l'**unique frontière réseau↔root**. Contrôles compensatoires en place : sortie échappée (`textContent`, pas d'`innerHTML` de contenu dynamique), **CSRF** (`X-Admin-CSRF`) sur toute mutation, cookie `HttpOnly`+`SameSite=Strict`, **audit-log** (Information) de chaque action/commande *avant* exécution, warning bruyant au démarrage si `Enabled && Pin==""`. **Conséquence opérationnelle : n'activer que sur un réseau de confiance et TOUJOURS définir `Admin.Pin`.**
+
+**Privilèges (dérogation D9)** — les actions root (restart/reboot, `cupsenable`, lecture `error_log`, écriture config sur FAT32 root) passent par `sudo`. L'image installe donc (via `image-builder/scripts/00-photobooth.sh`, bloc « 3.4bis ») :
+
+| Artefact (source `deploy/`) | Destination | Perms | Rôle |
+|---|---|---|---|
+| `sudoers.d/photobooth` | `/etc/sudoers.d/photobooth` | `0440 root:root` | **`pi ALL=(ALL) NOPASSWD: ALL`** (liste blanche abandonnée — la seule frontière est `Admin.Pin`). Validé par `visudo -c` à l'install (retiré si invalide). |
+| `photobooth-write-config.sh` | `/usr/local/sbin/photobooth-write-config.sh` | `0755` | écriture **atomique** (`temp + rename`) de `photobooth.json` sur la FAT32 root, depuis stdin. Appelé en `sudo` par l'hôte quand l'écriture directe (user `pi`) est refusée. Résiste à une coupure secteur (FAT32 sans journal). |
+
+Vérif manuelle sur le Pi : `sudo -n true` (réussit sans mot de passe), `sudo visudo -c` (`/etc/sudoers.d/photobooth: parsed OK`). Le « config-apply » de l'UI écrit le `photobooth.json` puis fait `sudo systemctl restart photobooth`.
+
+> Hors périmètre Phase 1 (reste à venir) : point d'accès WiFi autonome (hostapd/dnsmasq), mDNS/avahi, overlay de boot, persistance des logs sur FAT32.
+
 ---
 
 ## PHASE 4 — Valider en conditions réelles (AVANT de figer)

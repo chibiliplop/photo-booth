@@ -29,7 +29,7 @@ image-builder/
 ├── input.img            (généré) image Lite officielle — ignoré par git
 ├── output.img           (généré) image personnalisée — ignoré par git
 └── scripts/
-    ├── 00-photobooth.sh  personnalisation (rejoue §1.2/1.3/3.1-3.4 + overlay)
+    ├── 00-photobooth.sh  personnalisation (rejoue §1.2/1.3/3.1-3.5 + overlay)
     └── files/            (peuplé au build) monté sur /files dans le chroot
         ├── deploy/        <- copie de ../../deploy/
         └── publish/       <- sortie de dotnet publish
@@ -37,6 +37,12 @@ image-builder/
 
 **Source de vérité unique = `../deploy/`.** On ne duplique rien : `build-local.sh`
 et la CI y copient `deploy/` + `publish/` dans `scripts/files/` le temps du build.
+
+> Outre les units systemd et le provisioning Wi-Fi, `00-photobooth.sh` installe aussi
+> (bloc « 3.4bis ») les privilèges de l'hôte web d'admin/debug : `sudoers.d/photobooth`
+> (`/etc/sudoers.d/`, `0440`, validé par `visudo -c`) et `photobooth-write-config.sh`
+> (`/usr/local/sbin/`, `0755`). L'hôte reste **opt-in** (`Admin.Enabled=false` par défaut).
+> Voir [RUNBOOK §3.5](../RUNBOOK_MAINTENEUR_CARTE_SD.md).
 
 ## Build en local (recommandé pour la 1ʳᵉ fois)
 
