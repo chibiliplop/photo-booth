@@ -82,6 +82,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
     private void SetState(BoothState s)
     {
         Volatile.Write(ref _stateValue, (int)s);
+        _telemetry.RecordState(s);
         _log.LogDebug("State -> {State}", s);
     }
 
@@ -533,6 +534,8 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable
                 try { reachable = await _gopro.IsReachableAsync(ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                 catch { reachable = false; }
+
+                _telemetry.RecordGoProReachable(reachable);
 
                 if (reachable != last)
                 {

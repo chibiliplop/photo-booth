@@ -33,4 +33,24 @@ public class PrintTelemetryTests
         }
         finally { await rig.Workflow.DisposeAsync(); }
     }
+
+    [Fact]
+    public async Task Telemetry_tracks_state_and_gopro_reachability()
+    {
+        var rig = TestHarness.Build(NewFake(), printerEnabled: false);
+        await rig.Workflow.StartAsync();
+        try
+        {
+            // La boucle connectivité sonde immédiatement au démarrage (fake renvoie reachable=true).
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Telemetry.GoProReachable is not null));
+
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+            Assert.True(await TestHarness.WaitForAsync(
+                () => rig.Display.PhotoCount >= 1 && rig.Workflow.State == BoothState.Idle));
+
+            // L'état télémétrie suit l'état réel (écrit via SetState).
+            Assert.Equal(BoothState.Idle, rig.Telemetry.State);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
 }
