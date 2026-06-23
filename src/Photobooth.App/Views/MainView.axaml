@@ -351,6 +351,26 @@
                      TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
         </Border>
 
+        <!-- Ecran d'accueil admin : affiche au boot si Admin.Enabled && ShowAddressOnStartup (D5).
+             Opaque, au-dessus de tout sauf le bandeau Diagnostic (300). Ferme au 1er appui bouton
+             photo (gere dans App.axaml.cs) ; ne depend pas du pointeur. -->
+        <Panel ZIndex="270" IsVisible="{Binding HasAdminAddress}" IsHitTestVisible="False">
+          <Rectangle Fill="#F2000000" />
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" MaxWidth="1100">
+            <TextBlock Text="Administration" FontSize="48" FontWeight="Bold" Foreground="White"
+                       TextAlignment="Center" HorizontalAlignment="Center" />
+            <TextBlock Text="Connectez-vous au Wi-Fi de la borne, puis ouvrez cette adresse :"
+                       FontSize="30" Foreground="#D0D0D0" TextAlignment="Center"
+                       TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding AdminAddress}" FontSize="56" FontWeight="Bold"
+                       Foreground="#7FFF7F" TextAlignment="Center"
+                       TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <TextBlock Text="Appuyez sur le bouton photo pour démarrer"
+                       FontSize="28" Foreground="#9A9A9A" TextAlignment="Center"
+                       HorizontalAlignment="Center" Margin="0,16,0,0" />
+          </StackPanel>
+        </Panel>
+
       </Panel>
     </Viewbox>
 

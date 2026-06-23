@@ -194,6 +194,33 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     public void ShowDiagnostic(string? message) =>
         Dispatcher.UIThread.Post(() => Diagnostic = message);
 
+    private string? _adminAddress;
+
+    /// <summary>
+    /// Ecran d'accueil admin (URL a ouvrir), pose une fois au boot par l'App si Admin.Enabled &&
+    /// ShowAddressOnStartup. Comme <see cref="Diagnostic"/>, le workflow n'y touche jamais ;
+    /// ferme au 1er appui photo (gate cote App).
+    /// </summary>
+    public string? AdminAddress
+    {
+        get => _adminAddress;
+        private set
+        {
+            if (SetField(ref _adminAddress, value))
+                Raise(nameof(HasAdminAddress));
+        }
+    }
+
+    public bool HasAdminAddress => !string.IsNullOrEmpty(_adminAddress);
+
+    /// <summary>Affiche l'ecran d'accueil admin. Appele par l'App sur le thread UI.</summary>
+    public void ShowAdminAddress(string? text) =>
+        Dispatcher.UIThread.Post(() => AdminAddress = text);
+
+    /// <summary>Ferme l'ecran d'accueil admin (1er appui photo).</summary>
+    public void ClearAdminAddress() =>
+        Dispatcher.UIThread.Post(() => AdminAddress = null);
+
     public MainViewModel(IOptions<ThemeOptions> theme, IOptions<PrinterOptions> printer, ILogger<MainViewModel> log)
     {
         _log = log;
