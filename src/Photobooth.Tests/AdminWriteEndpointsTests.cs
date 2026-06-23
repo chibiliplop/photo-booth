@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Photobooth.Admin;
 using Photobooth.Core.Options;
+using Photobooth.Core.Workflow;
 using Xunit;
 
 namespace Photobooth.Tests;
@@ -55,5 +57,31 @@ public sealed class AdminWriteEndpointsTests
         var res = await client.PostAsync("/api/printer/enable", null);
         res.EnsureSuccessStatusCode();
         Assert.Contains(runner.Calls, c => c.File == "sudo" && c.Args.Length == 2 && c.Args[0] == "cupsenable");
+    }
+
+    private sealed class RecordingSink : Photobooth.Core.Workflow.IBoothCommandSink
+    {
+        public int Count { get; private set; }
+        public void Submit(Photobooth.Core.Workflow.BoothCommand command) => Count++;
+    }
+
+    [Fact]
+    public async Task Recover_gopro_submits_a_recovered_command()
+    {
+        var sink = new RecordingSink();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<Photobooth.Core.Workflow.IBoothCommandSink>(sink);
+        builder.Services.AddSingleton(new PrivilegedActions(new FakeProcessRunner(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PrivilegedActions>.Instance));
+        var app = builder.Build();
+        AdminEndpoints.MapActions(app);
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.PostAsync("/api/actions/recover-gopro", null);
+        res.EnsureSuccessStatusCode();
+        Assert.Equal(1, sink.Count);
     }
 }

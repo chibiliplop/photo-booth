@@ -154,6 +154,18 @@ public static class AdminEndpoints
         app.MapGet("/api/logs", (InMemoryLogSink sink) => Results.Json(sink.Snapshot()));
     }
 
+    /// <summary>Onglet actions (§7.5). Mutations soumises au middleware CSRF.</summary>
+    public static void MapActions(IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/actions/restart", async (PrivilegedActions pa) => Results.Json(await pa.RestartAppAsync()));
+        app.MapPost("/api/actions/reboot", async (PrivilegedActions pa) => Results.Json(await pa.RebootAsync()));
+        app.MapPost("/api/actions/recover-gopro", (Photobooth.Core.Workflow.IBoothCommandSink sink) =>
+        {
+            sink.Submit(new Photobooth.Core.Workflow.BoothCommand.Recovered());
+            return Results.Json(new { ok = true });
+        });
+    }
+
     /// <summary>Onglet imprimante (§8) : état + actions CUPS. Actions soumises au middleware CSRF.</summary>
     public static void MapPrinter(IEndpointRouteBuilder app)
     {

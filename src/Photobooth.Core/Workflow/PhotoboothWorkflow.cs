@@ -25,7 +25,7 @@ namespace Photobooth.Core.Workflow;
 ///  - the idle slideshow.
 /// A single <see cref="SemaphoreSlim"/> serializes GoPro media access between the slideshow and a capture.
 /// </summary>
-public sealed class PhotoboothWorkflow : IAsyncDisposable
+public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
 {
     private readonly IGoProClient _gopro;
     private readonly ILightOutput _light;
