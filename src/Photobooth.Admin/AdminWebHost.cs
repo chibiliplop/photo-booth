@@ -16,33 +16,26 @@ using Photobooth.Core.Options;
 namespace Photobooth.Admin;
 
 /// <summary>
-/// Hôte web Kestrel embarqué (lecture seule). Démarré seulement si Admin.Enabled. Tout échec de
-/// démarrage (bind, port occupé, adresse invalide) est loggé puis avalé : la borne n'est jamais
-/// dégradée par le mode debug. Lit BoothTelemetry / InMemoryLogSink ; ne dépend pas du workflow.
+/// Hôte web Kestrel embarqué. Démarré seulement si Admin.Enabled. Tout échec de démarrage (bind, port
+/// occupé, adresse invalide) est loggé puis avalé : la borne n'est jamais dégradée par le mode debug.
+/// Récupère les singletons partagés depuis le conteneur racine de l'app et les re-déclare dans le
+/// conteneur interne du WebApplication (injection minimal-API). Read-write : auth PIN + CSRF.
 /// </summary>
 public sealed class AdminWebHost : IAsyncDisposable
 {
-    private readonly BoothTelemetry _telemetry;
-    private readonly InMemoryLogSink _logSink;
-    private readonly IPrinterAdapter _printer;
-    private readonly IOptions<PrinterOptions> _printerOptions;
+    private readonly IServiceProvider _services;
     private readonly AdminOptions _opt;
     private readonly ILogger<AdminWebHost> _log;
     private readonly string _authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+    private readonly string _csrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
     private WebApplication? _app;
 
     public AdminWebHost(
-        BoothTelemetry telemetry,
-        InMemoryLogSink logSink,
-        IPrinterAdapter printer,
-        IOptions<PrinterOptions> printerOptions,
+        IServiceProvider services,
         IOptions<AdminOptions> options,
         ILogger<AdminWebHost> log)
     {
-        _telemetry = telemetry;
-        _logSink = logSink;
-        _printer = printer;
-        _printerOptions = printerOptions;
+        _services = services;
         _opt = options.Value;
         _log = log;
     }
@@ -55,19 +48,32 @@ public sealed class AdminWebHost : IAsyncDisposable
         if (!_opt.Enabled)
             return;
 
+        if (string.IsNullOrEmpty(_opt.Pin))
+            _log.LogWarning(
+                "ADMIN ACTIVÉ SANS PIN : surface complète (console root via sudo) exposée sur {Addr}:{Port} " +
+                "sans authentification. Définissez Admin.Pin pour fermer cette porte.",
+                _opt.ListenAddress, _opt.Port);
+
         try
         {
             var builder = WebApplication.CreateBuilder();
             builder.Logging.ClearProviders(); // Serilog gère déjà les logs applicatifs.
-            builder.Services.AddSingleton(_telemetry);
-            builder.Services.AddSingleton(_logSink);
-            builder.Services.AddSingleton(_printer);
-            builder.Services.AddSingleton(_printerOptions);
+
+            // Forward des singletons partagés (lecture) vers le conteneur de l'hôte.
+            Forward<BoothTelemetry>(builder.Services);
+            Forward<InMemoryLogSink>(builder.Services);
+            Forward<IPrinterAdapter>(builder.Services);
+            Forward<IOptions<PrinterOptions>>(builder.Services);
+            // [PLAN 3/3 — Task 11] forwards write ajoutés ici.
+
             builder.WebHost.UseUrls($"http://{_opt.ListenAddress}:{_opt.Port}");
 
             var app = builder.Build();
             AdminEndpoints.UseAuth(app, _opt, _authToken);
+            AdminEndpoints.UseCsrf(app, _csrfToken);
             AdminEndpoints.MapApi(app);
+            AdminEndpoints.MapCsrf(app, _csrfToken);
+            // [PLAN 3/3 — Task 11] MapPrinter/MapActions/MapConfig/MapConsole/MapLogStream ajoutés ici.
             AdminEndpoints.MapPage(app);
             await app.StartAsync();
 
@@ -82,6 +88,14 @@ public sealed class AdminWebHost : IAsyncDisposable
             BoundUrl = null;
             _app = null;
         }
+    }
+
+    // Récupère un singleton du conteneur racine et le re-déclare dans l'hôte (no-op si absent).
+    private void Forward<T>(IServiceCollection dst) where T : class
+    {
+        var instance = _services.GetService<T>();
+        if (instance is not null)
+            dst.AddSingleton(instance);
     }
 
     public async Task StopAsync()

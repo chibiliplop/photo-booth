@@ -58,11 +58,46 @@ public static class AdminEndpoints
             var pin = form["pin"].ToString();
             if (FixedTimeEquals(pin, opt.Pin))
             {
-                ctx.Response.Cookies.Append(CookieName, authToken, new CookieOptions { HttpOnly = true });
+                ctx.Response.Cookies.Append(CookieName, authToken,
+                    new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Strict });
                 return Results.Redirect("/");
             }
             return Results.Content(LoginHtml(error: true), "text/html");
         });
+    }
+
+    private const string CsrfHeader = "X-Admin-CSRF";
+
+    /// <summary>
+    /// Garde CSRF : toute requête mutante (POST/PUT/DELETE/PATCH) doit porter l'en-tête
+    /// <c>X-Admin-CSRF</c> égal au jeton de session. /login en est exempté (formulaire d'entrée).
+    /// Le jeton est lisible via GET /api/csrf (derrière l'auth) ; une page tierce ne peut ni le lire
+    /// (même origine) ni poser un en-tête custom sans CORS, ce qui bloque le CSRF.
+    /// </summary>
+    public static void UseCsrf(WebApplication app, string csrfToken)
+    {
+        app.Use(async (ctx, next) =>
+        {
+            var m = ctx.Request.Method;
+            var mutating = HttpMethods.IsPost(m) || HttpMethods.IsPut(m)
+                        || HttpMethods.IsDelete(m) || HttpMethods.IsPatch(m);
+            if (mutating && !ctx.Request.Path.StartsWithSegments("/login"))
+            {
+                var header = ctx.Request.Headers[CsrfHeader].ToString();
+                if (!FixedTimeEquals(header, csrfToken))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return;
+                }
+            }
+            await next();
+        });
+    }
+
+    /// <summary>Expose le jeton CSRF à la page (derrière l'auth si un PIN est défini).</summary>
+    public static void MapCsrf(IEndpointRouteBuilder app, string csrfToken)
+    {
+        app.MapGet("/api/csrf", () => Results.Json(new { token = csrfToken }));
     }
 
     private static bool FixedTimeEquals(string a, string b)

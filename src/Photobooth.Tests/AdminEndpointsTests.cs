@@ -137,6 +137,8 @@ public sealed class AdminEndpointsTests
         Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
         Assert.Contains(ok.Headers.GetValues("Set-Cookie"),
             v => v.Contains("padmin=TESTTOKEN") && v.ToLowerInvariant().Contains("httponly"));
+        Assert.Contains(ok.Headers.GetValues("Set-Cookie"),
+            v => v.Contains("SameSite=Strict", System.StringComparison.OrdinalIgnoreCase));
 
         // Mauvais PIN -> aucun Set-Cookie.
         var bad = await client.PostAsync("/login",

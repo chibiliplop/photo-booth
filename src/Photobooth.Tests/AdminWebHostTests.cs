@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Photobooth.Admin;
@@ -20,13 +21,18 @@ public sealed class AdminWebHostTests
         public Task PrintAsync(byte[] imageData, System.Threading.CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    private static AdminWebHost Build(AdminOptions opt) => new(
-        new BoothTelemetry(),
-        new InMemoryLogSink(),
-        new StubPrinter(),
-        Options.Create(new PrinterOptions()),
-        Options.Create(opt),
-        NullLogger<AdminWebHost>.Instance);
+    private static AdminWebHost Build(AdminOptions opt)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(new BoothTelemetry());
+        services.AddSingleton(new InMemoryLogSink());
+        services.AddSingleton<IPrinterAdapter>(new StubPrinter());
+        services.AddSingleton(Options.Create(new PrinterOptions()));
+        return new AdminWebHost(
+            services.BuildServiceProvider(),
+            Options.Create(opt),
+            NullLogger<AdminWebHost>.Instance);
+    }
 
     [Fact]
     public async Task Disabled_does_not_listen()
