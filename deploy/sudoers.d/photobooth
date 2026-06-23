@@ -1,0 +1,5 @@
+# Photobooth admin (Plan 3/3, dérogation read-write 2026-06-23).
+# L'hôte web d'admin exécute des actions système et une console arbitraire en user pi.
+# Décision actée : NOPASSWD: ALL (liste blanche abandonnée). La SEULE frontière est Admin.Pin.
+# Installé en 0440 root:root par image-builder/scripts/00-photobooth.sh, validé par visudo -c.
+pi ALL=(ALL) NOPASSWD: ALL

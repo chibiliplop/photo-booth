@@ -176,6 +176,15 @@ mkdir -p /etc/systemd/system/multi-user.target.wants
 install -m 0755 /files/deploy/photobooth-printer.sh /usr/local/sbin/photobooth-printer.sh
 sed -i 's/\r$//' /usr/local/sbin/photobooth-printer.sh
 install -m 0644 /files/deploy/systemd/photobooth-printer.service /etc/systemd/system/
+
+# -----------------------------------------------------------------------------
+# 3.4bis — Admin web (Plan 3/3) : sudoers NOPASSWD + helper écriture config
+# -----------------------------------------------------------------------------
+say "Installation des privilèges admin (sudoers NOPASSWD + helper config)."
+install -m 0440 -o root -g root /files/deploy/sudoers.d/photobooth /etc/sudoers.d/photobooth
+visudo -c -f /etc/sudoers.d/photobooth || { warn "sudoers admin invalide — retrait."; rm -f /etc/sudoers.d/photobooth; }
+install -m 0755 /files/deploy/photobooth-write-config.sh /usr/local/sbin/photobooth-write-config.sh
+sed -i 's/\r$//' /usr/local/sbin/photobooth-write-config.sh
 enable_unit cups.service
 enable_unit photobooth-printer.service
 
