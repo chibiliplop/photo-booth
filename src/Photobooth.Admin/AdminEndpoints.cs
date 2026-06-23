@@ -160,9 +160,9 @@ public static class AdminEndpoints
     /// <summary>Onglet actions (§7.5). Mutations soumises au middleware CSRF.</summary>
     public static void MapActions(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/actions/restart", async (PrivilegedActions pa) => Results.Json(await pa.RestartAppAsync()));
-        app.MapPost("/api/actions/reboot", async (PrivilegedActions pa) => Results.Json(await pa.RebootAsync()));
-        app.MapPost("/api/actions/recover-gopro", (Photobooth.Core.Workflow.IBoothCommandSink sink) =>
+        app.MapPost("/api/actions/restart", async ([Microsoft.AspNetCore.Mvc.FromServices] PrivilegedActions pa) => Results.Json(await pa.RestartAppAsync()));
+        app.MapPost("/api/actions/reboot", async ([Microsoft.AspNetCore.Mvc.FromServices] PrivilegedActions pa) => Results.Json(await pa.RebootAsync()));
+        app.MapPost("/api/actions/recover-gopro", ([Microsoft.AspNetCore.Mvc.FromServices] Photobooth.Core.Workflow.IBoothCommandSink sink) =>
         {
             sink.Submit(new Photobooth.Core.Workflow.BoothCommand.Recovered());
             return Results.Json(new { ok = true });
@@ -172,10 +172,10 @@ public static class AdminEndpoints
     /// <summary>Onglet config (§6/Étape 4). PUT valide via les Validate() existants, écrit, restart.</summary>
     public static void MapConfig(IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/config", async (ConfigStore store) =>
+        app.MapGet("/api/config", async ([Microsoft.AspNetCore.Mvc.FromServices] ConfigStore store) =>
             Results.Text(await store.ReadAsync(), "application/json"));
 
-        app.MapPut("/api/config", async (HttpContext ctx, ConfigStore store, PrivilegedActions pa) =>
+        app.MapPut("/api/config", async (HttpContext ctx, [Microsoft.AspNetCore.Mvc.FromServices] ConfigStore store, [Microsoft.AspNetCore.Mvc.FromServices] PrivilegedActions pa) =>
         {
             using var reader = new StreamReader(ctx.Request.Body);
             var json = await reader.ReadToEndAsync(ctx.RequestAborted);
@@ -193,15 +193,15 @@ public static class AdminEndpoints
     /// <summary>Onglet imprimante (§8) : état + actions CUPS. Actions soumises au middleware CSRF.</summary>
     public static void MapPrinter(IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/printer", async (PrinterControl pc) => Results.Json(await pc.StatusAsync()));
-        app.MapGet("/api/printer/usb", async (PrinterControl pc) => Results.Json(await pc.DetectUsbAsync()));
-        app.MapGet("/api/printer/queue", async (PrinterControl pc) => Results.Json(await pc.QueueAsync()));
-        app.MapGet("/api/printer/cups-log", async (PrinterControl pc) => Results.Json(await pc.CupsLogAsync()));
+        app.MapGet("/api/printer", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.StatusAsync()));
+        app.MapGet("/api/printer/usb", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.DetectUsbAsync()));
+        app.MapGet("/api/printer/queue", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.QueueAsync()));
+        app.MapGet("/api/printer/cups-log", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.CupsLogAsync()));
 
-        app.MapPost("/api/printer/enable", async (PrinterControl pc) => Results.Json(await pc.EnableAsync()));
-        app.MapPost("/api/printer/accept", async (PrinterControl pc) => Results.Json(await pc.AcceptAsync()));
-        app.MapPost("/api/printer/test", async (PrinterControl pc) => Results.Json(await pc.TestPrintAsync()));
-        app.MapPost("/api/printer/purge", async (PrinterControl pc) => Results.Json(await pc.PurgeAsync()));
+        app.MapPost("/api/printer/enable", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.EnableAsync()));
+        app.MapPost("/api/printer/accept", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.AcceptAsync()));
+        app.MapPost("/api/printer/test", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.TestPrintAsync()));
+        app.MapPost("/api/printer/purge", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.PurgeAsync()));
     }
 
     /// <summary>Flux de logs live en Server-Sent Events : snapshot initial puis push (§6).</summary>
@@ -242,7 +242,7 @@ public static class AdminEndpoints
     /// <summary>Onglet console (D8). Soumis au middleware CSRF + audit-log côté service.</summary>
     public static void MapConsole(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/console", async (ConsoleRequest req, ConsoleService console) =>
+        app.MapPost("/api/console", async (ConsoleRequest req, [Microsoft.AspNetCore.Mvc.FromServices] ConsoleService console) =>
         {
             if (string.IsNullOrWhiteSpace(req.Command))
                 return Results.Json(new { error = "commande vide" }, statusCode: StatusCodes.Status400BadRequest);

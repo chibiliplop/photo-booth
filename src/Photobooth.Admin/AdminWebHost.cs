@@ -65,11 +65,11 @@ public sealed class AdminWebHost : IAsyncDisposable
             Forward<IPrinterAdapter>(builder.Services);
             Forward<IOptions<PrinterOptions>>(builder.Services);
             // Forward write services (Plan 3/3). No-op if absent (degraded mode / tests read-only).
-            var hasPrinter  = Forward<PrinterControl>(builder.Services);
-            var hasPriv     = Forward<PrivilegedActions>(builder.Services);
-            var hasConsole  = Forward<ConsoleService>(builder.Services);
-            var hasConfig   = Forward<ConfigStore>(builder.Services);
-            var hasSink     = Forward<Photobooth.Core.Workflow.IBoothCommandSink>(builder.Services);
+            Forward<PrinterControl>(builder.Services);
+            Forward<PrivilegedActions>(builder.Services);
+            Forward<ConsoleService>(builder.Services);
+            Forward<ConfigStore>(builder.Services);
+            Forward<Photobooth.Core.Workflow.IBoothCommandSink>(builder.Services);
             Forward<IProcessRunner>(builder.Services);
 
             builder.WebHost.UseUrls($"http://{_opt.ListenAddress}:{_opt.Port}");
@@ -79,12 +79,13 @@ public sealed class AdminWebHost : IAsyncDisposable
             AdminEndpoints.UseCsrf(app, _csrfToken);
             AdminEndpoints.MapApi(app);
             AdminEndpoints.MapCsrf(app, _csrfToken);
-            // Only map write endpoints when all required services are available — avoids ASP.NET Core
-            // inferring unregistered service params as body params (which breaks the global route matcher).
-            if (hasPrinter)  AdminEndpoints.MapPrinter(app);
-            if (hasPriv && hasSink) AdminEndpoints.MapActions(app);
-            if (hasConfig && hasPriv) AdminEndpoints.MapConfig(app);
-            if (hasConsole)  AdminEndpoints.MapConsole(app);
+            // Endpoints mappés inconditionnellement. [FromServices] dans AdminEndpoints empêche
+            // l'inférence de body param sur les GETs pour les services non enregistrés ; un service
+            // absent surface en 500 à l'appel plutôt que de casser la table de routes.
+            AdminEndpoints.MapPrinter(app);
+            AdminEndpoints.MapActions(app);
+            AdminEndpoints.MapConfig(app);
+            AdminEndpoints.MapConsole(app);
             AdminEndpoints.MapLogStream(app);
             AdminEndpoints.MapPage(app);
             await app.StartAsync();
@@ -103,13 +104,12 @@ public sealed class AdminWebHost : IAsyncDisposable
     }
 
     // Récupère un singleton du conteneur racine et le re-déclare dans l'hôte.
-    // Retourne true si le service était présent (permet de mapper conditionnellement les endpoints write).
-    private bool Forward<T>(IServiceCollection dst) where T : class
+    // No-op si le service est absent (mode dégradé / tests read-only).
+    private void Forward<T>(IServiceCollection dst) where T : class
     {
         var instance = _services.GetService<T>();
         if (instance is not null)
             dst.AddSingleton(instance);
-        return instance is not null;
     }
 
     public async Task StopAsync()
