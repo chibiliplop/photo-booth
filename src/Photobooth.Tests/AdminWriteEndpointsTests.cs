@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -168,5 +169,24 @@ public sealed class AdminWriteEndpointsTests
         var result = await res.Content.ReadFromJsonAsync<ProcessResult>();
         Assert.NotNull(result);
         Assert.Contains("pong", result!.Stdout);
+        Assert.Equal("echo pong", runner.Calls.Single().Args[0]);
+    }
+
+    [Fact]
+    public async Task Post_console_rejects_empty_command_400()
+    {
+        var runner = new FakeProcessRunner();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton(new ConsoleService(runner,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ConsoleService>.Instance));
+        var app = builder.Build();
+        AdminEndpoints.MapConsole(app);
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.PostAsJsonAsync("/api/console", new ConsoleRequest("   "));
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 }
