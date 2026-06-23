@@ -153,4 +153,20 @@ public sealed class AdminEndpointsTests
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/status")).StatusCode);
     }
+
+    [Fact]
+    public async Task Root_serves_html_page_when_no_pin()
+    {
+        await using var app = BuildApp(new BoothTelemetry(), new InMemoryLogSink(), printerEnabled: false);
+        // BuildApp ne mappe que l'API ; on ajoute la page comme l'hôte réel.
+        AdminEndpoints.MapPage(app);
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.GetAsync("/");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Equal("text/html", res.Content.Headers.ContentType?.MediaType);
+        var html = await res.Content.ReadAsStringAsync();
+        Assert.Contains("Borne photo", html);
+    }
 }

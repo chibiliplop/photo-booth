@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -83,6 +84,23 @@ public static class AdminEndpoints
         "style='font-size:1.2rem;padding:.5rem;width:100%'>" +
         "<button style='font-size:1.2rem;padding:.5rem;margin-top:.5rem;width:100%'>Entrer</button>" +
         "</form></body>";
+
+    private static readonly string PageHtml = LoadPage();
+
+    private static string LoadPage()
+    {
+        var asm = typeof(AdminEndpoints).Assembly;
+        using var s = asm.GetManifestResourceStream("Photobooth.Admin.admin.html")
+                      ?? throw new InvalidOperationException("Ressource admin.html introuvable.");
+        using var r = new StreamReader(s);
+        return r.ReadToEnd();
+    }
+
+    /// <summary>Mappe GET / (page HTML embarquée). Soumis au middleware d'auth s'il est installé.</summary>
+    public static void MapPage(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/", () => Results.Content(PageHtml, "text/html"));
+    }
 
     public static void MapApi(IEndpointRouteBuilder app)
     {

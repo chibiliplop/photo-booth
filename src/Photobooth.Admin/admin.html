@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Borne photo — admin</title>
+<style>
+  :root { font-family: system-ui, sans-serif; }
+  body { margin: 0; background: #111; color: #eee; }
+  header { padding: .8rem 1rem; background: #1c1c1c; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .badge { padding: .2rem .6rem; border-radius: .4rem; background: #333; font-size: .9rem; }
+  .dot { width: .8rem; height: .8rem; border-radius: 50%; display: inline-block; }
+  .ok { background: #2e9b4f; } .ko { background: #c0392b; } .unknown { background: #888; }
+  main { padding: 1rem; }
+  .card { background: #1c1c1c; border-radius: .5rem; padding: 1rem; margin-bottom: 1rem; }
+  .fail { border-left: 4px solid #c0392b; }
+  .ok-print { border-left: 4px solid #2e9b4f; }
+  #logs { font-family: ui-monospace, monospace; font-size: .8rem; white-space: pre-wrap;
+          max-height: 50vh; overflow: auto; background: #000; padding: .6rem; border-radius: .4rem; }
+  .lvl { display: inline-block; width: 5rem; color: #9cf; }
+  .Warning { color: #f1c40f; } .Error, .Fatal { color: #e74c3c; }
+  .filters button { margin-right: .3rem; }
+  footer { padding: .6rem 1rem; color: #888; font-size: .8rem; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Borne photo</strong>
+  <span class="badge">État : <span id="state">…</span></span>
+  <span class="badge">GoPro <span id="gopro" class="dot unknown"></span></span>
+  <span class="badge">Imprimante : <span id="printer">…</span></span>
+  <span class="badge" id="freshness">MAJ…</span>
+</header>
+<main>
+  <div class="card" id="lastprint-card">
+    <h2>Dernière impression</h2>
+    <div id="lastprint">Aucune impression.</div>
+  </div>
+  <div class="card">
+    <h2>Logs</h2>
+    <div class="filters">
+      <button data-f="All">Tous</button>
+      <button data-f="Information">Info</button>
+      <button data-f="Warning">Warning</button>
+      <button data-f="Error">Error</button>
+    </div>
+    <div id="logs">…</div>
+  </div>
+</main>
+<footer><span id="version"></span> · <span id="time"></span></footer>
+<script>
+  let filter = "All", lastLines = [];
+  function dot(v){ return v === true ? "ok" : v === false ? "ko" : "unknown"; }
+  async function refresh(){
+    try {
+      const s = await (await fetch("/api/status")).json();
+      document.getElementById("state").textContent = s.state;
+      document.getElementById("gopro").className = "dot " + dot(s.goProReachable);
+      document.getElementById("printer").textContent = s.printer.enabled ? s.printer.type : "désactivée";
+      const lp = document.getElementById("lastprint"), card = document.getElementById("lastprint-card");
+      if (!s.lastPrint) { lp.textContent = "Aucune impression."; card.className = "card"; }
+      else if (s.lastPrint.succeeded) { lp.textContent = "OK — " + s.lastPrint.at; card.className = "card ok-print"; }
+      else { lp.textContent = "ÉCHEC — " + (s.lastPrint.reason || "") + " (" + s.lastPrint.at + ")"; card.className = "card fail"; }
+      document.getElementById("version").textContent = "v" + s.version;
+      document.getElementById("time").textContent = s.serverTimeUtc;
+      lastLines = await (await fetch("/api/logs")).json();
+      renderLogs();
+      document.getElementById("freshness").textContent = "MAJ OK";
+    } catch (e) {
+      document.getElementById("freshness").textContent = "hôte injoignable";
+    }
+  }
+  function renderLogs(){
+    const box = document.getElementById("logs");
+    const rows = lastLines.filter(l => filter === "All" || l.level === filter)
+      .map(l => '<div><span class="lvl ' + l.level + '">' + l.level + '</span>' +
+                l.message + (l.exception ? "\n" + l.exception : "") + '</div>').join("");
+    box.innerHTML = rows; box.scrollTop = box.scrollHeight;
+  }
+  document.querySelectorAll(".filters button").forEach(b =>
+    b.onclick = () => { filter = b.dataset.f; renderLogs(); });
+  refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>

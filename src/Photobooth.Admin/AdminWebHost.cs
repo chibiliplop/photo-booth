@@ -68,6 +68,7 @@ public sealed class AdminWebHost : IAsyncDisposable
             var app = builder.Build();
             AdminEndpoints.UseAuth(app, _opt, _authToken);
             AdminEndpoints.MapApi(app);
+            AdminEndpoints.MapPage(app);
             await app.StartAsync();
 
             var addresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses;
