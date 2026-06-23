@@ -11,7 +11,7 @@ public sealed record PrinterDetail(string Raw, bool? Enabled, bool? Accepting);
 
 /// <summary>
 /// Commandes imprimante/CUPS de l'onglet imprimante (debug terrain §8). Lecture en user pi
-/// (lpstat/lpq) ; cupsenable/cupsaccept/lpinfo + lecture error_log via sudo (root). Les modifs
+/// (lpstat) ; cupsenable/cupsaccept/lpinfo + lecture error_log via sudo (root). Les modifs
 /// runtime (enable/accept) sont temporaires sous l'overlay (réinitialisées au reboot, §14.3).
 /// </summary>
 public sealed class PrinterControl
@@ -54,8 +54,11 @@ public sealed class PrinterControl
     public Task<ProcessResult> DetectUsbAsync(CancellationToken ct = default) =>
         _runner.RunAsync("sudo", new[] { "lpinfo", "-v" }, ct: ct);
 
+    // `lpstat -o <queue>` (cups-client) plutôt que `lpq -P` : lpq vit dans cups-bsd, absent de
+    // l'image (install --no-install-recommends de cups + cups-client). Un lpq introuvable faisait
+    // lever Process.Start → 500 sur /api/printer/queue → l'onglet imprimante affichait « indisponible ».
     public Task<ProcessResult> QueueAsync(CancellationToken ct = default) =>
-        _runner.RunAsync("lpq", new[] { "-P", Queue }, ct: ct);
+        _runner.RunAsync("lpstat", new[] { "-o", Queue }, ct: ct);
 
     public Task<ProcessResult> CupsLogAsync(CancellationToken ct = default) =>
         _runner.RunAsync("sudo", new[] { "tail", "-n", "200", "/var/log/cups/error_log" }, ct: ct);

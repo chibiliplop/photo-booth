@@ -133,6 +133,14 @@
   }
   const post = (url, body) => send("POST", url, body);
   const put  = (url, body) => send("PUT", url, body);
+  // GET JSON avec garde 401 (session expirée → /login) ; lève sur statut non-OK ou corps non-JSON,
+  // pour que l'appelant traite chaque section indépendamment plutôt que de tout faire tomber.
+  async function getJson(url){
+    const res = await fetch(url);
+    if (res.status === 401) { location.href = "/login"; throw new Error("unauthorized"); }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
 
   // --- onglets ---
   document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
@@ -193,16 +201,20 @@
     $(id).textContent = (r.exitCode === 0 ? "OK" : "exit " + r.exitCode) + (r.timedOut ? " [timeout]" : "") + "\n" + (r.stdout || "") + (r.stderr ? "\n" + r.stderr : "");
   }
   async function refreshPrinter(){
+    // Chaque section est indépendante : un appel en échec (ex. /queue en 500) ne doit pas
+    // effacer les autres ni faire afficher « indisponible » sur tout l'onglet.
     try {
-      const d = await (await fetch("/api/printer")).json();
+      const d = await getJson("/api/printer");
       const b = $("printer-badges"); b.replaceChildren();
       [["enabled", d.enabled], ["accepting", d.accepting]].forEach(([k, v]) => {
         const s = document.createElement("span"); s.className = "badge"; s.textContent = k + " : " + (v === null ? "?" : v); b.appendChild(s);
       });
-      const pre = $("printer-out"); pre.textContent = d.raw || "";
-      $("printer-queue").textContent = (await (await fetch("/api/printer/queue")).json()).stdout || "—";
-      $("printer-cupslog").textContent = (await (await fetch("/api/printer/cups-log")).json()).stdout || "—";
+      $("printer-out").textContent = d.raw || "";
     } catch (e) { $("printer-out").textContent = "indisponible"; }
+    try { $("printer-queue").textContent = (await getJson("/api/printer/queue")).stdout || "—"; }
+    catch (e) { $("printer-queue").textContent = "indisponible"; }
+    try { $("printer-cupslog").textContent = (await getJson("/api/printer/cups-log")).stdout || "—"; }
+    catch (e) { $("printer-cupslog").textContent = "indisponible"; }
   }
   document.querySelectorAll("[data-printer]").forEach(b => b.onclick = async () => {
     const a = b.dataset.printer;

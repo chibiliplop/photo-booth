@@ -36,6 +36,19 @@ public sealed class PrinterControlTests
     }
 
     [Fact]
+    public async Task Queue_uses_lpstat_o_on_the_queue()
+    {
+        // lpq vit dans le paquet cups-bsd (absent de l'image : seul cups-client est installé).
+        // QueueAsync doit donc utiliser l'équivalent System V `lpstat -o`, présent dans cups-client.
+        var runner = new FakeProcessRunner();
+        await Build(runner).QueueAsync();
+
+        var call = runner.Calls.Single();
+        Assert.Equal("lpstat", call.File);
+        Assert.Equal(new[] { "-o", "photobooth-printer" }, call.Args);
+    }
+
+    [Fact]
     public async Task DetectUsb_uses_sudo_lpinfo_v()
     {
         var runner = new FakeProcessRunner();
