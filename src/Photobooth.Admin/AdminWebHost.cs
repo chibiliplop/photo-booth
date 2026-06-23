@@ -83,11 +83,15 @@ public sealed class AdminWebHost : IAsyncDisposable
     public async Task StopAsync()
     {
         if (_app is null) return;
-        try { await _app.StopAsync(); }
-        catch (Exception ex) { _log.LogWarning(ex, "Arrêt de l'hôte admin échoué (ignoré)."); }
-        await _app.DisposeAsync();
+        var app = _app;
         _app = null;
         BoundUrl = null;
+        try
+        {
+            await app.StopAsync();
+            await app.DisposeAsync();
+        }
+        catch (Exception ex) { _log.LogWarning(ex, "Arrêt de l'hôte admin échoué (ignoré)."); }
     }
 
     public async ValueTask DisposeAsync() => await StopAsync();
