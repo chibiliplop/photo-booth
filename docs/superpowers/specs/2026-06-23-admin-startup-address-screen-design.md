@@ -51,12 +51,12 @@ public static class AdminAddress
 }
 ```
 
-Règles de `BuildUrls` :
+Règles de `BuildUrls` (volontairement minimales) :
 - ne garder que les **IPv4** ;
-- **exclure** loopback (`127.0.0.0/8`) et link-local/APIPA (`169.254.0.0/16`) ;
-- **trier** : sous-réseau GoPro `10.5.5.0/24` d'abord (cas « via la GoPro »), puis les autres ;
-- format `http://{ip}:{port}` ;
-- dédupliquer.
+- **exclure le loopback** (`127.0.0.0/8`) — sinon on afficherait `http://127.0.0.1:8080`, joignable depuis aucun autre appareil donc trompeur ; c'est le seul filtre ;
+- format `http://{ip}:{port}`, dédupliqué.
+
+Pas de tri ni de priorisation : sur le terrain la borne est cliente WiFi de la GoPro, il n'y a en pratique qu'une seule IP exploitable (celle attribuée par la GoPro). S'il y en a plusieurs (ex. Ethernet branché en plus), on les affiche toutes, l'opérateur choisit.
 
 `LocalUrls` énumère via `System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()` (interfaces `OperationalStatus.Up`, hors loopback) et délègue à `BuildUrls`. Toute exception est avalée → liste vide (best-effort).
 
@@ -120,7 +120,7 @@ Cohérent avec l'existant (tout est best-effort, jamais fatal) :
 ## 7. Tests
 
 - `AdminOptionsTests` : `ShowAddressOnStartup` vaut `true` par défaut.
-- Nouveau test `AdminAddress.BuildUrls` : ordre (`10.5.5.x` d'abord), exclusions (loopback `127.x`, link-local `169.254.x`), format `http://ip:port`, dédup, cas « aucune IP » → liste vide.
+- Nouveau test `AdminAddress.BuildUrls` : exclusion du loopback (`127.x`), format `http://ip:port`, dédup, cas « aucune IP » → liste vide.
 - Nouveau test `StartupNoticeGate` : `Arm` → `ConsumePress()` vrai une seule fois (puis faux) ; `Pending` reflète l'état.
 - Vérification manuelle / screenshot : overlay visible au boot avec admin activé, fermé au 1er appui sans capture.
 
