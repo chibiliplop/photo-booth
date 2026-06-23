@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.LinuxFramebuffer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Photobooth.Admin;
 using Photobooth.App.Composition;
 using Serilog;
 
@@ -49,12 +50,14 @@ internal static class Program
             .AddEnvironmentVariables(prefix: "PHOTOBOOTH_") // e.g. PHOTOBOOTH_Gopro__Mode=http
             .Build();
 
-        ConfigureSerilog(config, baseDir);
+        var logBuffer = new InMemoryLogSink();
+        ConfigureSerilog(config, baseDir, logBuffer);
 
         try
         {
             var sc = new ServiceCollection();
             sc.AddPhotobooth(config);
+            sc.AddSingleton(logBuffer);
             Services = sc.BuildServiceProvider();
 
             var error = ServiceConfiguration.ValidateOptions(Services);
@@ -101,7 +104,7 @@ internal static class Program
             .UsePlatformDetect()
             .LogToTrace();
 
-    private static void ConfigureSerilog(IConfiguration config, string baseDir)
+    private static void ConfigureSerilog(IConfiguration config, string baseDir, InMemoryLogSink logBuffer)
     {
         var configured = config["Logging:File:Path"] ?? "logs/booth-.log";
         var logPath = Path.IsPathRooted(configured) ? configured : Path.Combine(baseDir, configured);
@@ -109,6 +112,7 @@ internal static class Program
             .MinimumLevel.Information()
             .Enrich.FromLogContext()
             .WriteTo.Console()
+            .WriteTo.Sink(logBuffer)
             .WriteTo.File(
                 logPath,
                 rollingInterval: RollingInterval.Day,

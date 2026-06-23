@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Photobooth.Core\Photobooth.Core.csproj" />
     <ProjectReference Include="..\Photobooth.Adapters\Photobooth.Adapters.csproj" />
+    <ProjectReference Include="..\Photobooth.Admin\Photobooth.Admin.csproj" />
   </ItemGroup>
 
   <ItemGroup>
