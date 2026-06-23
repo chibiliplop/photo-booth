@@ -21,6 +21,7 @@ namespace Photobooth.App;
 public partial class App : Application
 {
     private PhotoboothWorkflow? _workflow;
+    private readonly StartupNoticeGate _noticeGate = new();
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -54,6 +55,20 @@ public partial class App : Application
         var buttons = hardware.Button;
         _workflow = workflow;
 
+        // Decision admin lue une fois : sert a l'ecran d'accueil (ci-dessous) et au demarrage de l'hote.
+        var adminOpt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Photobooth.Core.Options.AdminOptions>>().Value;
+
+        // 1re action si l'admin est active : afficher l'URL a ouvrir (D5). Arme AVANT le demarrage des
+        // boutons pour qu'aucun appui ne soit capture avant la fermeture de l'ecran.
+        if (adminOpt.Enabled && adminOpt.ShowAddressOnStartup)
+        {
+            var urls = Photobooth.Admin.AdminAddress.LocalUrls(adminOpt.Port);
+            vm.ShowAdminAddress(urls.Count > 0
+                ? string.Join("\n", urls)
+                : "Adresse introuvable — vérifiez le réseau.");
+            _noticeGate.Arm();
+        }
+
         Control? root = null;
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -64,7 +79,7 @@ public partial class App : Application
                 window.WindowState = WindowState.FullScreen;
                 window.SystemDecorations = SystemDecorations.None;
             }
-            window.KeyDown += (_, e) => OnKey(e, workflow);
+            window.KeyDown += (_, e) => OnKey(e, vm, workflow);
             desktop.MainWindow = window;
             desktop.ShutdownRequested += (_, _) => ShutdownWorkflow();
             root = window;
@@ -72,7 +87,7 @@ public partial class App : Application
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
             var view = new MainView { DataContext = vm };
-            view.KeyDown += (_, e) => OnKey(e, workflow);
+            view.KeyDown += (_, e) => OnKey(e, vm, workflow);
             singleView.MainView = view;
             root = view;
         }
@@ -82,9 +97,11 @@ public partial class App : Application
         var diagnostic = ServiceConfiguration.ValidateOptions(sp) ?? hardware.StartupWarning;
 
         // Route hardware buttons (and keyboard) to the workflow's command channel.
-        buttons.PhotoPressed += () => workflow.Submit(new BoothCommand.PhotoRequested());
-        buttons.VideoPressed += () => workflow.Submit(new BoothCommand.VideoToggleRequested());
-        buttons.PrintPressed += () => workflow.Submit(new BoothCommand.PrintRequested());
+        // Tant que l'ecran d'accueil admin est affiche (_noticeGate), le 1er appui photo le ferme
+        // sans capturer, et les appuis video/impression sont ignores.
+        buttons.PhotoPressed += () => SubmitPhoto(vm, workflow);
+        buttons.VideoPressed += () => { if (!_noticeGate.Pending) workflow.Submit(new BoothCommand.VideoToggleRequested()); };
+        buttons.PrintPressed += () => { if (!_noticeGate.Pending) workflow.Submit(new BoothCommand.PrintRequested()); };
         try
         {
             buttons.Start();
@@ -104,7 +121,6 @@ public partial class App : Application
         // arrête l'hôte à l'extinction, comme le workflow.
         try
         {
-            var adminOpt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Photobooth.Core.Options.AdminOptions>>().Value;
             if (adminOpt.Enabled)
                 _ = sp.GetRequiredService<AdminWebHost>().StartAsync();
         }
@@ -128,21 +144,32 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static void OnKey(KeyEventArgs e, PhotoboothWorkflow workflow)
+    private void OnKey(KeyEventArgs e, MainViewModel vm, PhotoboothWorkflow workflow)
     {
         switch (e.Key)
         {
             case Key.Space:
             case Key.Enter:
-                workflow.Submit(new BoothCommand.PhotoRequested());
+                SubmitPhoto(vm, workflow);
                 break;
             case Key.V:
-                workflow.Submit(new BoothCommand.VideoToggleRequested());
+                if (!_noticeGate.Pending) workflow.Submit(new BoothCommand.VideoToggleRequested());
                 break;
             case Key.P:
-                workflow.Submit(new BoothCommand.PrintRequested());
+                if (!_noticeGate.Pending) workflow.Submit(new BoothCommand.PrintRequested());
                 break;
         }
+    }
+
+    // 1er appui pendant l'ecran d'accueil admin = fermeture (pas de capture) ; sinon capture normale.
+    private void SubmitPhoto(MainViewModel vm, PhotoboothWorkflow workflow)
+    {
+        if (_noticeGate.ConsumePress())
+        {
+            vm.ClearAdminAddress();
+            return;
+        }
+        workflow.Submit(new BoothCommand.PhotoRequested());
     }
 
     private void ShutdownWorkflow()
