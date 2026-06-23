@@ -134,4 +134,18 @@ public sealed class AdminWriteEndpointsTests
         Assert.True(File.Exists(path));
         Assert.Contains("Copies", await File.ReadAllTextAsync(path));
     }
+
+    [Fact]
+    public async Task Get_config_returns_json_content_type_and_empty_object_when_absent()
+    {
+        var (app, _) = BuildConfigApp();
+        await using var _app = app;
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.GetAsync("/api/config");
+        res.EnsureSuccessStatusCode();
+        Assert.Equal("application/json", res.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("{}", (await res.Content.ReadAsStringAsync()).Trim());
+    }
 }

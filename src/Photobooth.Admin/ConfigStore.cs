@@ -45,8 +45,9 @@ public sealed class ConfigStore
         IConfiguration cfg;
         try
         {
+            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
             cfg = new ConfigurationBuilder()
-                .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                .AddJsonStream(ms)
                 .Build();
         }
         catch (Exception ex)

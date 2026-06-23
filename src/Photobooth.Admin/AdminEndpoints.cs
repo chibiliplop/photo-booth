@@ -175,7 +175,7 @@ public static class AdminEndpoints
         app.MapPut("/api/config", async (HttpContext ctx, ConfigStore store, PrivilegedActions pa) =>
         {
             using var reader = new StreamReader(ctx.Request.Body);
-            var json = await reader.ReadToEndAsync();
+            var json = await reader.ReadToEndAsync(ctx.RequestAborted);
 
             var error = store.Validate(json);
             if (error is not null)
