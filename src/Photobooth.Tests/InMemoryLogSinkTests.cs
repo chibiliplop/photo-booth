@@ -48,4 +48,15 @@ public class InMemoryLogSinkTests
         Assert.Equal(InMemoryLogSink.Capacity, snap.Count);
         Assert.Contains((InMemoryLogSink.Capacity + 49).ToString(), snap[^1].Message); // le plus récent est conservé
     }
+
+    [Fact]
+    public void Emitted_event_fires_for_each_log()
+    {
+        var sink = new InMemoryLogSink();
+        var received = 0;
+        sink.Emitted += _ => received++;
+        using (var logger = new Serilog.LoggerConfiguration().WriteTo.Sink(sink).CreateLogger())
+            logger.Information("ping");
+        Assert.Equal(1, received);
+    }
 }

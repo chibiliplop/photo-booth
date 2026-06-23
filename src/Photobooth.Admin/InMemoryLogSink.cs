@@ -18,6 +18,9 @@ public sealed class InMemoryLogSink : ILogEventSink
     private readonly object _lock = new();
     private readonly LinkedList<LogLine> _lines = new();
 
+    /// <summary>Levé après l'ajout d'une ligne au buffer (alimente le flux SSE). Thread-arbitraire.</summary>
+    public event System.Action<LogLine>? Emitted;
+
     public void Emit(LogEvent logEvent)
     {
         var line = new LogLine(
@@ -32,6 +35,7 @@ public sealed class InMemoryLogSink : ILogEventSink
             if (_lines.Count > Capacity)
                 _lines.RemoveFirst();
         }
+        Emitted?.Invoke(line);
     }
 
     /// <summary>Copie des lignes en tampon, de la plus ancienne à la plus récente.</summary>

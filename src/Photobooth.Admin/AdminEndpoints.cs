@@ -3,6 +3,9 @@ using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -199,5 +202,40 @@ public static class AdminEndpoints
         app.MapPost("/api/printer/accept", async (PrinterControl pc) => Results.Json(await pc.AcceptAsync()));
         app.MapPost("/api/printer/test", async (PrinterControl pc) => Results.Json(await pc.TestPrintAsync()));
         app.MapPost("/api/printer/purge", async (PrinterControl pc) => Results.Json(await pc.PurgeAsync()));
+    }
+
+    /// <summary>Flux de logs live en Server-Sent Events : snapshot initial puis push (§6).</summary>
+    public static void MapLogStream(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/logs/stream", async (HttpContext ctx, InMemoryLogSink sink, CancellationToken ct) =>
+        {
+            ctx.Response.Headers.ContentType = "text/event-stream";
+            ctx.Response.Headers.CacheControl = "no-cache";
+
+            var channel = Channel.CreateUnbounded<LogLine>();
+            void Handler(LogLine l) => channel.Writer.TryWrite(l);
+            sink.Emitted += Handler;
+            try
+            {
+                foreach (var line in sink.Snapshot())
+                    await WriteSse(ctx, line, ct);
+                await ctx.Response.Body.FlushAsync(ct);
+
+                while (!ct.IsCancellationRequested)
+                {
+                    var line = await channel.Reader.ReadAsync(ct);
+                    await WriteSse(ctx, line, ct);
+                    await ctx.Response.Body.FlushAsync(ct);
+                }
+            }
+            catch (OperationCanceledException) { /* client déconnecté */ }
+            finally { sink.Emitted -= Handler; }
+        });
+    }
+
+    private static async Task WriteSse(HttpContext ctx, LogLine line, CancellationToken ct)
+    {
+        var json = JsonSerializer.Serialize(line, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        await ctx.Response.WriteAsync($"data: {json}\n\n", ct);
     }
 }
