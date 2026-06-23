@@ -187,7 +187,11 @@
   }
 
   // --- imprimante ---
-  function setText(id, r){ $(id).textContent = r ? ((r.exitCode === 0 ? "OK" : "exit " + r.exitCode) + (r.timedOut ? " [timeout]" : "") + "\n" + (r.stdout || "") + (r.stderr ? "\n" + r.stderr : "")) : "—"; }
+  function setText(id, r){
+    if (!r) { $(id).textContent = "—"; return; }
+    if (r.exitCode === undefined) { $(id).textContent = "Erreur : " + (r.error || "réponse inattendue"); return; }
+    $(id).textContent = (r.exitCode === 0 ? "OK" : "exit " + r.exitCode) + (r.timedOut ? " [timeout]" : "") + "\n" + (r.stdout || "") + (r.stderr ? "\n" + r.stderr : "");
+  }
   async function refreshPrinter(){
     try {
       const d = await (await fetch("/api/printer")).json();
@@ -202,7 +206,11 @@
   }
   document.querySelectorAll("[data-printer]").forEach(b => b.onclick = async () => {
     const a = b.dataset.printer;
-    if (a === "usb") { const r = await (await fetch("/api/printer/usb")).json(); setText("printer-out", r); return; }
+    if (a === "usb") {
+      try { const r = await (await fetch("/api/printer/usb")).json(); setText("printer-out", r); }
+      catch (e) { $("printer-out").textContent = "indisponible"; }
+      return;
+    }
     const r = await post("/api/printer/" + a);
     setText("printer-out", r.data); refreshPrinter();
   });
