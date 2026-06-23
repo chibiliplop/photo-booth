@@ -59,6 +59,16 @@ internal static class ServiceConfiguration
 
         services.AddSingleton<BoothTelemetry>();
         services.AddSingleton<PhotoboothWorkflow>();
+        // Admin read-write (Plan 3/3).
+        services.AddSingleton<IProcessRunner, ProcessRunner>();
+        services.AddSingleton<PrinterControl>();
+        services.AddSingleton<PrivilegedActions>();
+        services.AddSingleton<ConsoleService>();
+        services.AddSingleton<ConfigStore>();
+        services.AddSingleton<IBoothCommandSink>(sp => sp.GetRequiredService<PhotoboothWorkflow>());
+        var adminConfigDir = Environment.GetEnvironmentVariable("PHOTOBOOTH_CONFIG_DIR")
+            ?? "/boot/firmware/photobooth";
+        services.AddSingleton(new AdminConfigTarget(Path.Combine(adminConfigDir, "photobooth.json")));
         services.AddSingleton<AdminWebHost>();
         return services;
     }

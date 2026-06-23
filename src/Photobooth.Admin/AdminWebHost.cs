@@ -64,7 +64,13 @@ public sealed class AdminWebHost : IAsyncDisposable
             Forward<InMemoryLogSink>(builder.Services);
             Forward<IPrinterAdapter>(builder.Services);
             Forward<IOptions<PrinterOptions>>(builder.Services);
-            // [PLAN 3/3 — Task 11] forwards write ajoutés ici.
+            // Forward write services (Plan 3/3). No-op if absent (degraded mode / tests read-only).
+            var hasPrinter  = Forward<PrinterControl>(builder.Services);
+            var hasPriv     = Forward<PrivilegedActions>(builder.Services);
+            var hasConsole  = Forward<ConsoleService>(builder.Services);
+            var hasConfig   = Forward<ConfigStore>(builder.Services);
+            var hasSink     = Forward<Photobooth.Core.Workflow.IBoothCommandSink>(builder.Services);
+            Forward<IProcessRunner>(builder.Services);
 
             builder.WebHost.UseUrls($"http://{_opt.ListenAddress}:{_opt.Port}");
 
@@ -73,7 +79,13 @@ public sealed class AdminWebHost : IAsyncDisposable
             AdminEndpoints.UseCsrf(app, _csrfToken);
             AdminEndpoints.MapApi(app);
             AdminEndpoints.MapCsrf(app, _csrfToken);
-            // [PLAN 3/3 — Task 11] MapPrinter/MapActions/MapConfig/MapConsole/MapLogStream ajoutés ici.
+            // Only map write endpoints when all required services are available — avoids ASP.NET Core
+            // inferring unregistered service params as body params (which breaks the global route matcher).
+            if (hasPrinter)  AdminEndpoints.MapPrinter(app);
+            if (hasPriv && hasSink) AdminEndpoints.MapActions(app);
+            if (hasConfig && hasPriv) AdminEndpoints.MapConfig(app);
+            if (hasConsole)  AdminEndpoints.MapConsole(app);
+            AdminEndpoints.MapLogStream(app);
             AdminEndpoints.MapPage(app);
             await app.StartAsync();
 
@@ -90,12 +102,14 @@ public sealed class AdminWebHost : IAsyncDisposable
         }
     }
 
-    // Récupère un singleton du conteneur racine et le re-déclare dans l'hôte (no-op si absent).
-    private void Forward<T>(IServiceCollection dst) where T : class
+    // Récupère un singleton du conteneur racine et le re-déclare dans l'hôte.
+    // Retourne true si le service était présent (permet de mapper conditionnellement les endpoints write).
+    private bool Forward<T>(IServiceCollection dst) where T : class
     {
         var instance = _services.GetService<T>();
         if (instance is not null)
             dst.AddSingleton(instance);
+        return instance is not null;
     }
 
     public async Task StopAsync()
