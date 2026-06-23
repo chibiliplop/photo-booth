@@ -20,6 +20,10 @@ public sealed class AdminOptions
     /// <summary>PIN d'accès optionnel : vide = pas d'authentification.</summary>
     public string Pin { get; set; } = "";
 
+    /// <summary>Affiche l'URL d'admin a l'ecran au demarrage (1er appui bouton photo = fermeture).
+    /// N'a d'effet que si <see cref="Enabled"/>. Defaut true.</summary>
+    public bool ShowAddressOnStartup { get; set; } = true;
+
     public string? Validate()
     {
         if (Port is < 1 or > 65535)

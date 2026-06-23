@@ -17,6 +17,7 @@ public sealed class AdminOptionsTests
         Assert.Equal("0.0.0.0", o.ListenAddress);
         Assert.Equal(8080, o.Port);
         Assert.Equal("", o.Pin);
+        Assert.True(o.ShowAddressOnStartup);
         Assert.Null(o.Validate());
     }
 
