@@ -99,5 +99,27 @@
     // false = une seule impression par photo, puis retour au mode photo. (defaut)
     // true  = peut reimprimer la meme photo plusieurs fois pendant la fenetre.
     "AllowMultiplePrints": false
+  },
+
+  // =====================================================================
+  //  INTERFACE DE DIAGNOSTIC (OPTIONNEL)
+  //  Petit serveur web embarque pour visualiser l'etat de la borne et les
+  //  logs en temps reel, depuis n'importe quel navigateur sur le meme reseau.
+  //  Desactive par defaut : la borne fonctionne normalement sans lui.
+  //  Pour activer, passez Enabled a true et connectez-vous a
+  //  http://<ip-borne>:8080. Protegez l'acces avec Pin si necessaire.
+  // =====================================================================
+  "Admin": {
+    // Mettre true pour activer l'interface de diagnostic en reseau local.
+    "Enabled": false,
+
+    // Adresse d'ecoute. "0.0.0.0" = accessible depuis tout le reseau local.
+    "ListenAddress": "0.0.0.0",
+
+    // Port HTTP de l'interface (defaut 8080).
+    "Port": 8080,
+
+    // Code d'acces optionnel (laissez vide "" pour aucun code).
+    "Pin": ""
   }
 }

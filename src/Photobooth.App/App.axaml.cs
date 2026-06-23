@@ -8,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Photobooth.Admin;
 using Photobooth.App.Composition;
 using Photobooth.App.ViewModels;
 using Photobooth.App.Views;
@@ -97,6 +98,20 @@ public partial class App : Application
                            "Vérifiez le câblage et les droits d'accès (groupes gpio/i2c).";
         }
         _ = workflow.StartAsync();
+
+        // Hôte d'admin/debug optionnel (off par défaut). Tout échec est dégradé, jamais fatal :
+        // la borne ne doit jamais tomber à cause du mode debug. Le conteneur (IAsyncDisposable)
+        // arrête l'hôte à l'extinction, comme le workflow.
+        try
+        {
+            var adminOpt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Photobooth.Core.Options.AdminOptions>>().Value;
+            if (adminOpt.Enabled)
+                _ = sp.GetRequiredService<AdminWebHost>().StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Démarrage de l'hôte admin ignoré (mode dégradé).");
+        }
 
         if (diagnostic is not null)
         {

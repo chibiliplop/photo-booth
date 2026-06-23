@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Photobooth.App.Composition;
 using Photobooth.Core.Options;
 using Xunit;
 
@@ -31,5 +35,19 @@ public sealed class AdminOptionsTests
     {
         var o = new AdminOptions { ListenAddress = "  " };
         Assert.NotNull(o.Validate());
+    }
+
+    [Fact]
+    public void Invalid_admin_port_is_surfaced_by_ValidateOptions()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Admin:Port"] = "0" })
+            .Build();
+        var sp = new ServiceCollection().AddPhotobooth(config).BuildServiceProvider();
+
+        var error = ServiceConfiguration.ValidateOptions(sp);
+
+        Assert.NotNull(error);
+        Assert.Contains("Admin.Port", error);
     }
 }

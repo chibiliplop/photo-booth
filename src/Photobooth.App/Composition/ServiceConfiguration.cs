@@ -9,6 +9,7 @@ using Avalonia.Platform;
 using Photobooth.Adapters.GoPro;
 using Photobooth.Adapters.Printing;
 using Photobooth.App.ViewModels;
+using Photobooth.Admin;
 using Photobooth.Core.Abstractions;
 using Photobooth.Core.Diagnostics;
 using Photobooth.Core.Options;
@@ -26,6 +27,7 @@ internal static class ServiceConfiguration
         services.Configure<TimingOptions>(config.GetSection(TimingOptions.Section));
         services.Configure<ThemeOptions>(config.GetSection(ThemeOptions.Section));
         services.Configure<PrinterOptions>(config.GetSection(PrinterOptions.Section));
+        services.Configure<AdminOptions>(config.GetSection(AdminOptions.Section));
 
         services.AddLogging(b => b.AddSerilog(dispose: false));
 
@@ -57,6 +59,7 @@ internal static class ServiceConfiguration
 
         services.AddSingleton<BoothTelemetry>();
         services.AddSingleton<PhotoboothWorkflow>();
+        services.AddSingleton<AdminWebHost>();
         return services;
     }
 
@@ -66,7 +69,8 @@ internal static class ServiceConfiguration
             ?? sp.GetRequiredService<IOptions<HardwareOptions>>().Value.Validate()
             ?? sp.GetRequiredService<IOptions<TimingOptions>>().Value.Validate()
             ?? sp.GetRequiredService<IOptions<ThemeOptions>>().Value.Validate()
-            ?? sp.GetRequiredService<IOptions<PrinterOptions>>().Value.Validate();
+            ?? sp.GetRequiredService<IOptions<PrinterOptions>>().Value.Validate()
+            ?? sp.GetRequiredService<IOptions<AdminOptions>>().Value.Validate();
     }
 
     private static FakeGoProClient CreateFakeGoPro(IServiceProvider sp)

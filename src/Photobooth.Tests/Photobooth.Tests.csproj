@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Photobooth.Core\Photobooth.Core.csproj" />
     <ProjectReference Include="..\Photobooth.Adapters\Photobooth.Adapters.csproj" />
     <ProjectReference Include="..\Photobooth.Admin\Photobooth.Admin.csproj" />
+    <ProjectReference Include="..\Photobooth.App\Photobooth.App.csproj" />
   </ItemGroup>
 
 </Project>
