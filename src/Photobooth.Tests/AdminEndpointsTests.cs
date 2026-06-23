@@ -135,7 +135,8 @@ public sealed class AdminEndpointsTests
         var ok = await client.PostAsync("/login",
             new FormUrlEncodedContent(new Dictionary<string, string> { ["pin"] = "1234" }));
         Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
-        Assert.Contains(ok.Headers.GetValues("Set-Cookie"), v => v.Contains("padmin=TESTTOKEN"));
+        Assert.Contains(ok.Headers.GetValues("Set-Cookie"),
+            v => v.Contains("padmin=TESTTOKEN") && v.ToLowerInvariant().Contains("httponly"));
 
         // Mauvais PIN -> aucun Set-Cookie.
         var bad = await client.PostAsync("/login",

@@ -38,7 +38,7 @@ public static class AdminEndpoints
                 await next();
                 return;
             }
-            if (ctx.Request.Cookies.TryGetValue(CookieName, out var c) && c == authToken)
+            if (ctx.Request.Cookies.TryGetValue(CookieName, out var c) && FixedTimeEquals(c, authToken))
             {
                 await next();
                 return;
