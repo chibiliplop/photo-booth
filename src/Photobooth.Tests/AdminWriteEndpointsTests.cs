@@ -1,3 +1,6 @@
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -83,5 +86,52 @@ public sealed class AdminWriteEndpointsTests
         var res = await client.PostAsync("/api/actions/recover-gopro", null);
         res.EnsureSuccessStatusCode();
         Assert.Equal(1, sink.Count);
+    }
+
+    private static (WebApplication app, string path) BuildConfigApp()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "pb-cfg-ep-" + Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "photobooth.json");
+
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        var runner = new FakeProcessRunner();
+        builder.Services.AddSingleton(new ConfigStore(new AdminConfigTarget(path), runner,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigStore>.Instance));
+        builder.Services.AddSingleton(new PrivilegedActions(runner,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PrivilegedActions>.Instance));
+        var app = builder.Build();
+        AdminEndpoints.MapConfig(app);
+        return (app, path);
+    }
+
+    [Fact]
+    public async Task Put_invalid_config_is_rejected_400()
+    {
+        var (app, _) = BuildConfigApp();
+        await using var _app = app;
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.PutAsync("/api/config",
+            new StringContent("{ \"Printer\": { \"Type\": \"cups\", \"Copies\": 0 } }"));
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_valid_config_writes_and_requests_restart()
+    {
+        var (app, path) = BuildConfigApp();
+        await using var _app = app;
+        await app.StartAsync();
+        var client = app.GetTestClient();
+
+        var res = await client.PutAsync("/api/config",
+            new StringContent("{ \"Printer\": { \"Copies\": 3 } }"));
+        res.EnsureSuccessStatusCode();
+        Assert.True(File.Exists(path));
+        Assert.Contains("Copies", await File.ReadAllTextAsync(path));
     }
 }

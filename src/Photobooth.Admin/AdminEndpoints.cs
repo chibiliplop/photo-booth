@@ -166,6 +166,27 @@ public static class AdminEndpoints
         });
     }
 
+    /// <summary>Onglet config (§6/Étape 4). PUT valide via les Validate() existants, écrit, restart.</summary>
+    public static void MapConfig(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/config", async (ConfigStore store) =>
+            Results.Text(await store.ReadAsync(), "application/json"));
+
+        app.MapPut("/api/config", async (HttpContext ctx, ConfigStore store, PrivilegedActions pa) =>
+        {
+            using var reader = new StreamReader(ctx.Request.Body);
+            var json = await reader.ReadToEndAsync();
+
+            var error = store.Validate(json);
+            if (error is not null)
+                return Results.Json(new { error }, statusCode: StatusCodes.Status400BadRequest);
+
+            await store.WriteAsync(json);
+            var restart = await pa.RestartAppAsync();
+            return Results.Json(new { applied = true, restart });
+        });
+    }
+
     /// <summary>Onglet imprimante (§8) : état + actions CUPS. Actions soumises au middleware CSRF.</summary>
     public static void MapPrinter(IEndpointRouteBuilder app)
     {
