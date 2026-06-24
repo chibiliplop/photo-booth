@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Photobooth.App.ViewModels;
@@ -21,6 +22,16 @@ public partial class MainView : UserControl
     {
         InitializeComponent();
         Focusable = true; // so keyboard triggers work in single-view (Pi) mode
+    }
+
+    // In single-view mode (Pi, launched with --drm/--fbdev) no control receives keyboard focus
+    // automatically, so the view's KeyDown handler (wired in App.axaml.cs) never fires and the
+    // Space/Enter/V/P keys appear dead. Grab focus once the view is loaded so the keyboard fallback
+    // works. Harmless on desktop, where the Window is focused on activation anyway.
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        Focus();
     }
 
     protected override void OnDataContextChanged(EventArgs e)
