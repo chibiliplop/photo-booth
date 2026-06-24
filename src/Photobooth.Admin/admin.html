@@ -81,6 +81,7 @@
     </div>
     <div class="card">
       <h2>File CUPS (lpq)</h2><pre id="printer-queue">—</pre>
+      <h2>Options driver (lpoptions -l)</h2><pre id="printer-options">—</pre>
       <h2>Logs CUPS (error_log)</h2><pre id="printer-cupslog">—</pre>
     </div>
   </section>
@@ -213,6 +214,8 @@
     } catch (e) { $("printer-out").textContent = "indisponible"; }
     try { $("printer-queue").textContent = (await getJson("/api/printer/queue")).stdout || "—"; }
     catch (e) { $("printer-queue").textContent = "indisponible"; }
+    try { $("printer-options").textContent = (await getJson("/api/printer/options")).stdout || "—"; }
+    catch (e) { $("printer-options").textContent = "indisponible"; }
     try { $("printer-cupslog").textContent = (await getJson("/api/printer/cups-log")).stdout || "—"; }
     catch (e) { $("printer-cupslog").textContent = "indisponible"; }
   }

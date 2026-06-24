@@ -49,6 +49,18 @@ public sealed class PrinterControlTests
     }
 
     [Fact]
+    public async Task Options_uses_lpoptions_l_on_the_queue()
+    {
+        // Lecture seule (pas de sudo) : liste les options driver (PageSize…) pour le debug.
+        var runner = new FakeProcessRunner();
+        await Build(runner).OptionsAsync();
+
+        var call = runner.Calls.Single();
+        Assert.Equal("lpoptions", call.File);
+        Assert.Equal(new[] { "-p", "photobooth-printer", "-l" }, call.Args);
+    }
+
+    [Fact]
     public async Task DetectUsb_uses_sudo_lpinfo_v()
     {
         var runner = new FakeProcessRunner();

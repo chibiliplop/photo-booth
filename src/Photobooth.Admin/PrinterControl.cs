@@ -60,6 +60,13 @@ public sealed class PrinterControl
     public Task<ProcessResult> QueueAsync(CancellationToken ct = default) =>
         _runner.RunAsync("lpstat", new[] { "-o", Queue }, ct: ct);
 
+    // `lpoptions -p <queue> -l` (cups-client) : liste les options du driver — PageSize,
+    // Resolution, ColorModel, MediaType… — avec leurs choix possibles. Sert à diagnostiquer
+    // le format papier (ex. vérifier que la valeur Media de la config est un choix valide).
+    // Lecture seule en user pi (comme lpstat) : pas de sudo nécessaire.
+    public Task<ProcessResult> OptionsAsync(CancellationToken ct = default) =>
+        _runner.RunAsync("lpoptions", new[] { "-p", Queue, "-l" }, ct: ct);
+
     public Task<ProcessResult> CupsLogAsync(CancellationToken ct = default) =>
         _runner.RunAsync("sudo", new[] { "tail", "-n", "200", "/var/log/cups/error_log" }, ct: ct);
 }

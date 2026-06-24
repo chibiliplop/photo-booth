@@ -196,6 +196,7 @@ public static class AdminEndpoints
         app.MapGet("/api/printer", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.StatusAsync()));
         app.MapGet("/api/printer/usb", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.DetectUsbAsync()));
         app.MapGet("/api/printer/queue", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.QueueAsync()));
+        app.MapGet("/api/printer/options", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.OptionsAsync()));
         app.MapGet("/api/printer/cups-log", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.CupsLogAsync()));
 
         app.MapPost("/api/printer/enable", async ([Microsoft.AspNetCore.Mvc.FromServices] PrinterControl pc) => Results.Json(await pc.EnableAsync()));
