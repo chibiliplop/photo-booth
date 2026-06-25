@@ -27,7 +27,7 @@ KeepAliveHost = 127.0.0.1
 KeepAlivePort = 8554
 ```
 
-The current UWP app still hardcodes `10.5.5.9`, so the app must be made configurable before it can use this simulator directly.
+The GoPro endpoints are configurable via `Gopro.ControlBaseUrl`, `Gopro.MediaBaseUrl` and `Gopro.KeepAliveHost` (default `10.5.5.9`), so point them at `127.0.0.1` to use this simulator.
 
 ## Behavior
 
