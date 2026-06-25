@@ -1,8 +1,8 @@
-# RUNBOOK MAINTENEUR — Fabriquer la carte SD turnkey
+# Fabrication de l'image SD turnkey
 
 > **Pour qui** : le mainteneur (vous), sous Windows. **Pas** l'opérateur événementiel.
 > **But** : produire une image `photobooth-dist.img.xz` distribuable, validée en conditions réelles, qui démarre seule sur la borne dès qu'on branche HDMI + boutons + GoPro + alim.
-> **Méthode retenue** : **golden master clone + PiShrink**, en architecture 2 couches (OS figé / config événement éditable sur FAT32). Option de secours **CustoPiZer** en §10.
+> **Méthode principale** : **fabrication reproductible via CustoPiZer** (CI + `image-builder/`) — voir [`../../image-builder/README.md`](../../image-builder/README.md). Ce document décrit les PHASES en vue d'une fabrication manuelle (golden master clone + PiShrink) et sert de référence pour la validation Pi réel (PHASE 4, obligatoire quelle que soit la méthode).
 > **Principe directeur** : ce qui est distribué doit être, bit pour bit, ce qui a été validé sur le terrain. On fabrique l'image **une fois**, on la fige, on ne la refait que si l'OS ou le code change.
 
 ---
@@ -14,7 +14,7 @@
 | **OS + système (figée)** | OS Lite 64-bit Bookworm, paquets, service systemd durci, overlay FS, provisioning Wi-Fi, le binaire `publish/` | Partition `ext4` (invisible sous Windows) | Mainteneur, rarement |
 | **Config événement (éditable)** | `wifi.txt`, `photobooth.json`, `fond.jpg` | Partition **FAT32** `/boot/firmware/photobooth/` (visible Windows/Mac) | Opérateur, à chaque événement |
 
-> Les fichiers prêts à copier (script de provisioning, units systemd, modèles `boot-config/`) sont versionnés dans **`deploy/`**. Ce runbook en reproduit le contenu inline pour le suivi pas-à-pas.
+> Les fichiers prêts à copier (script de provisioning, units systemd, modèles `boot-config/`) sont versionnés dans **[`deploy/`](../../deploy/README.md)** — source de vérité unique, ne rien dupliquer ici.
 
 Tout ce qui change par événement vit sur la FAT32, **hors overlay**. Tout le reste est figé et protégé par l'overlay read-only.
 
@@ -162,11 +162,13 @@ LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe /home/pi/photobooth/Photobooth.A
 
 La borne doit s'afficher plein écran, FPS correct, RAM stable (`free -m`, pas de montée continue).
 
-#### Rendu (à valider impérativement sur le Pi 3 avant de figer l'image)
+#### Rendu (à valider impérativement sur le Pi réel avant de figer l'image)
 
 - `AVALONIA_RENDERER=software` était une variable d'**Avalonia 0.10** : elle est **ignorée en Avalonia 11** (no-op). Ne pas s'y fier.
 - D'après les mainteneurs Avalonia, le backend **DRM (`StartLinuxDrm` / `--drm`) est *toujours* accéléré matériellement** ; le backend **FBDev est *toujours* logiciel**.
 - **Donc le service turnkey lance `--drm` par défaut** : il est plus fluide sur le Pi validé. `--fbdev` reste le fallback documenté si un autre écran/modèle donne un écran noir ou une instabilité EGL.
+
+> Décisions de packaging et de rendu (choix d'architecture, backends Avalonia, trim/ReadyToRun) : voir **[`architecture.md`](architecture.md)**.
 
 ---
 
@@ -181,40 +183,14 @@ La borne doit s'afficher plein écran, FPS correct, RAM stable (`free -m`, pas d
 sudo mkdir -p /boot/firmware/photobooth
 ```
 
-`/boot/firmware/photobooth/wifi.txt` :
+Les modèles versionnés (`wifi.txt`, `photobooth.json`, `fond.jpg`, `admin.txt`) sont dans **[`deploy/boot-config/`](../../deploy/README.md)** — les copier tels quels, puis adapter. Résumé des points clés :
 
-```ini
-# Reseau Wi-Fi de la GoPro. Editer puis rebrancher la borne.
-GOPRO_SSID=GP12345678
-GOPRO_PASSWORD=motdepasse-de-ma-gopro
-WIFI_COUNTRY=FR
-```
+- **`wifi.txt`** : clés `GOPRO_SSID` / `GOPRO_PASSWORD` (lues par `photobooth-provision.sh`) + `WIFI_COUNTRY=FR`.
+- **`photobooth.json`** : section `Theme` (noms, année, fond) + `"Gopro": { "Mode": "http" }`. Le parser .NET tolère `//` et virgules finales. Mode démo : passer `"fake"`, remettre `"http"` avant le vrai événement.
+- **`admin.txt`** (avancé, mainteneur) : override optionnel du mot de passe SSH `pi`, réappliqué à **chaque boot** par `photobooth-provision.sh` (nécessaire sous overlay, où un `passwd` SSH ne persiste pas).
+- **`fond.jpg`** : image de fond modèle, l'opérateur la remplacera.
 
-> **Clés exactes** : `GOPRO_SSID` / `GOPRO_PASSWORD` (c'est ce que lit `photobooth-provision.sh`). Le modèle complet, avec réseau secondaire optionnel, est dans `deploy/boot-config/wifi.txt`.
-
-`/boot/firmware/photobooth/photobooth.json` :
-
-```jsonc
-{
-  "Theme": {
-    "Names": "Camille & Yann",
-    "Year": "2026",
-    "BackgroundImage": "/boot/firmware/photobooth/fond.jpg"
-  },
-  "Gopro": {
-    // "http" = vraie GoPro (jour J) ; "fake" = mode démo sans GoPro (tests).
-    "Mode": "http"
-  }
-}
-```
-
-> Le parser de config .NET tolère les commentaires `//` et les virgules finales. Modèle versionné : `deploy/boot-config/photobooth.json`.
-
-`/boot/firmware/photobooth/fond.jpg` : déposer une image de fond modèle (l'opérateur la remplacera).
-
-`/boot/firmware/photobooth/admin.txt` (**avancé, mainteneur**) : override **optionnel** du mot de passe SSH du compte `pi`. Le mot de passe baké à la fabrication n'est qu'un **défaut** (`raspberry`) ; décommenter `PI_PASSWORD=...` ici le change **par carte**, sans rebuild. `photobooth-provision.sh` le réapplique à **chaque boot** : c'est volontaire, car sous overlay un `passwd` en SSH ne persiste pas. L'opérateur d'événement n'y touche pas.
-
-**Mode démo (test sans GoPro)** : il n'y a **pas** de fichier-sentinelle `MODE_DEMO.txt` — aucun code ne le lit (vérifié dans `ServiceConfiguration.cs`). Le mode démo se règle par `"Gopro": { "Mode": "fake" }` dans `photobooth.json`. L'opérateur remet `"http"` avant le vrai événement.
+> Il n'y a **pas** de fichier-sentinelle `MODE_DEMO.txt` — aucun code ne le lit. Le mode démo se règle uniquement par `photobooth.json`.
 
 ### 3.2 — Service de provisioning Wi-Fi (oneshot, idempotent, à chaque boot)
 
@@ -234,35 +210,10 @@ Points clés : `tr -d '\r'` neutralise les CRLF Windows ; `autoconnect-priority 
 
 ### 3.3 — Service kiosk durci
 
-`/etc/systemd/system/photobooth.service` :
-
-```ini
-[Unit]
-Description=Photobooth kiosk
-After=multi-user.target photobooth-provision.service
-Conflicts=getty@tty1.service
-
-[Service]
-Type=simple
-User=pi
-SupplementaryGroups=gpio i2c video input render
-WorkingDirectory=/home/pi/photobooth
-ExecStart=/home/pi/photobooth/Photobooth.App --drm
-# Backend GPU DRM/KMS par défaut sur le Pi validé (voir section « Rendu » en §2).
-# NE PAS utiliser AVALONIA_RENDERER=software : no-op en Avalonia 11.
-Environment=DOTNET_GCHeapHardLimit=0x18000000
-Restart=always
-RestartSec=3
-StandardInput=tty
-TTYPath=/dev/tty1
-TTYReset=yes
-TTYVTDisallocate=yes
-
-[Install]
-WantedBy=multi-user.target
-```
+Le fichier source de vérité est **[`deploy/systemd/photobooth.service`](../../deploy/README.md)**. Installation :
 
 ```bash
+sudo cp deploy/systemd/photobooth.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable photobooth.service
 ```
@@ -275,6 +226,9 @@ sudo systemctl disable getty@tty1.service
 sudo systemctl mask getty@tty1.service
 ```
 
+Points clés de l'unit (lire `deploy/systemd/photobooth.service` pour le détail complet) :
+
+- `Conflicts=getty@tty1.service`, `TTYReset=yes`, `TTYVTDisallocate=yes` — kiosk propre sur tty1.
 - `Restart=always` + `RestartSec=3` : tout crash se soigne en 3 s — principal levier de stabilité.
 - `DOTNET_GCHeapHardLimit=0x18000000` (~384 Mo) : plafonne le tas .NET (Pi 1 Go).
 - L'app coupe **toujours** la lumière à l'arrêt (fin normale, exception, SIGTERM).
@@ -312,33 +266,9 @@ sudo systemctl disable bluetooth hciuart ModemManager avahi-daemon triggerhappy 
 
 ### 3.5 — Interface web d'admin/debug (opt-in) + privilèges
 
-La borne embarque un hôte web d'admin/debug (`Photobooth.Admin`, Kestrel) pour le **dépannage terrain à distance** (sur le réseau WiFi de la GoPro). Il est **désactivé par défaut** — tant que `Admin.Enabled=false`, **rien n'écoute**.
+La borne embarque un hôte web d'admin/debug (`Photobooth.Admin`) — **désactivé par défaut** (`Admin.Enabled=false` → rien n'écoute). Les artefacts nécessaires (`sudoers.d/photobooth`, `photobooth-write-config.sh`) sont dans **[`deploy/`](../../deploy/README.md)** et installés par `image-builder/scripts/00-photobooth.sh` (bloc « 3.4bis »).
 
-**Activer sur une borne déployée (sans rebuild)** : ajouter une section `Admin` au `photobooth.json` de la FAT32, puis rebrancher :
-
-```jsonc
-{
-  "Admin": {
-    "Enabled": true,
-    "Pin": "1234",        // OBLIGATOIRE en pratique : vide = aucune authentification
-    "Port": 8080,         // défaut 8080 ; sur l'IP du Pi (≠ 10.5.5.9 de la GoPro)
-    "ListenAddress": "0.0.0.0"
-  }
-}
-```
-
-Accès : `http://<ip-du-Pi>:<port>/` → login PIN → page à onglets. **Lecture** : logs live (SSE), état borne/imprimante. **Écriture** : actions imprimante/CUPS (`cupsenable`/`cupsaccept`/test/purge, `lpinfo`, `tail error_log`), édition de `photobooth.json` (valide → écrit → **redémarre la borne**), **console shell arbitraire**, restart/reboot, reprise GoPro.
-
-**Modèle de menace (dérogation read-write actée le 2026-06-23, voir le design §3/§10)** — le **PIN** (+ la clé WiFi GoPro) est l'**unique frontière réseau↔root**. Contrôles compensatoires en place : sortie échappée (`textContent`, pas d'`innerHTML` de contenu dynamique), **CSRF** (`X-Admin-CSRF`) sur toute mutation, cookie `HttpOnly`+`SameSite=Strict`, **audit-log** (Information) de chaque action/commande *avant* exécution, warning bruyant au démarrage si `Enabled && Pin==""`. **Conséquence opérationnelle : n'activer que sur un réseau de confiance et TOUJOURS définir `Admin.Pin`.**
-
-**Privilèges (dérogation D9)** — les actions root (restart/reboot, `cupsenable`, lecture `error_log`, écriture config sur FAT32 root) passent par `sudo`. L'image installe donc (via `image-builder/scripts/00-photobooth.sh`, bloc « 3.4bis ») :
-
-| Artefact (source `deploy/`) | Destination | Perms | Rôle |
-|---|---|---|---|
-| `sudoers.d/photobooth` | `/etc/sudoers.d/photobooth` | `0440 root:root` | **`pi ALL=(ALL) NOPASSWD: ALL`** (liste blanche abandonnée — la seule frontière est `Admin.Pin`). Validé par `visudo -c` à l'install (retiré si invalide). |
-| `photobooth-write-config.sh` | `/usr/local/sbin/photobooth-write-config.sh` | `0755` | écriture **atomique** (`temp + rename`) de `photobooth.json` sur la FAT32 root, depuis stdin. Appelé en `sudo` par l'hôte quand l'écriture directe (user `pi`) est refusée. Résiste à une coupure secteur (FAT32 sans journal). |
-
-Vérif manuelle sur le Pi : `sudo -n true` (réussit sans mot de passe), `sudo visudo -c` (`/etc/sudoers.d/photobooth: parsed OK`). Le « config-apply » de l'UI écrit le `photobooth.json` puis fait `sudo systemctl restart photobooth`.
+Pour la procédure d'activation, le modèle de menace, les contrôles de sécurité (CSRF, PIN, audit-log) et la table sudoers complète, voir **[`admin-debug.md`](admin-debug.md)**.
 
 > Hors périmètre Phase 1 (reste à venir) : point d'accès WiFi autonome (hostapd/dnsmasq), mDNS/avahi, overlay de boot, persistance des logs sur FAT32.
 
@@ -457,9 +387,9 @@ L'artefact distribuable est **`photobooth-dist.img.xz`**.
 ## PHASE 6 — Distribuer
 
 - Flasher `photobooth-dist.img.xz` directement avec Raspberry Pi Imager (il décompresse le `.xz` à la volée) ou Balena Etcher, sur les cartes à livrer ; ou livrer les cartes déjà flashées.
-- ⚠️ **Avec Raspberry Pi Imager : répondre « Non » à la personnalisation de l'OS** (sinon profil `preconfigured` injecté → fuite Wi-Fi + override). Etcher n'a pas ce piège.
-- Le **pas-à-pas complet d'installation** (flashage détaillé, premier démarrage, config, dépannage), destiné à celui qui installe une borne, est dans **[`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md)**.
-- Joindre les **2 fiches plastifiées** destinées à l'opérateur (préparation à la maison / jour J + dépannage) — voir le guide opérateur, séparé de ce runbook.
+- ⚠️ **Avec Raspberry Pi Imager : répondre « Non » à la personnalisation de l'OS** (sinon profil `preconfigured` injecté → fuite Wi-Fi + override). Etcher n'a pas ce piège. Voir le détail de ce piège dans **[`../monter-et-utiliser/2-installation.md`](../monter-et-utiliser/2-installation.md)**.
+- Le **pas-à-pas complet d'installation** (flashage détaillé, premier démarrage, config, dépannage), destiné à celui qui installe une borne, est dans **[`../monter-et-utiliser/2-installation.md`](../monter-et-utiliser/2-installation.md)**.
+- Joindre les **2 fiches plastifiées** destinées à l'opérateur (préparation à la maison / jour J + dépannage) — voir le guide opérateur, séparé de ce document.
 
 ---
 
@@ -541,36 +471,8 @@ Tant que **l'OS ne change pas**, une nouvelle version de l'app = remplacer `publ
 
 ---
 
-## §10 — CustoPiZer : fabrication reproductible (IMPLÉMENTÉ — méthode principale)
+## Fabrication reproductible (méthode principale) — renvoi
 
-> **Statut** : implémenté dans **[`image-builder/`](image-builder/README.md)** +
-> CI **[`.github/workflows/build-image.yml`](.github/workflows/build-image.yml)**.
-> Dès lors qu'on **distribue à des tiers** (ou que le clone manuel dérive), c'est
-> la voie à privilégier : la *fabrication* devient reproductible, traçable en Git,
-> et **sans Pi physique**.
+La fabrication CI sans Pi physique (CustoPiZer + GitHub Actions + PiShrink) est entièrement documentée dans **[`../../image-builder/README.md`](../../image-builder/README.md)**.
 
-Principe : au lieu de cloner un Pi physique, on rejoue les PHASES 1-3 (et l'overlay
-+ nettoyage de la PHASE 5) sous forme de **scripts versionnés**, dans un conteneur
-Docker, en partant de l'image Lite officielle. Même architecture 2 couches, même
-mécanisme FAT32. Éprouvé en production (OctoPi).
-
-Ce qui est livré :
-
-1. **`image-builder/scripts/00-photobooth.sh`** — porte §1.2, §1.3, §3.1-3.4 :
-   création user `pi`, paquets, dépose `publish/`, unités systemd + provisioning,
-   modèles FAT32, durcissement boot, et overlay FS derrière le flag
-   `PHOTOBOOTH_OVERLAY` (image *dist* vs *dev*). Conversions `raspi-config nonint`
-   incluses (pas d'interactif en chroot).
-2. **`image-builder/build-local.sh`** — pipeline complet en local (WSL2/Linux + Docker).
-3. **`.github/workflows/build-image.yml`** — `dotnet publish` → QEMU → CustoPiZer
-   → PiShrink `-aZ` → artefact / Release. **Aucun secret embarqué** (modèles neutres).
-
-Source de vérité unique = **`deploy/`** : la CI/le script y copient `deploy/` +
-`publish/` dans `scripts/files/` le temps du build (zéro duplication).
-
-> **⚠️ Deux invariants** (cf. `image-builder/README.md`) : (a) CustoPiZer remplace
-> la *fabrication*, **pas la validation** — la PHASE 4 reste à faire sur un **Pi
-> réel, par modèle** ; (b) **l'overlay dans le chroot** (initramfs sous QEMU) est
-> le point à **dérisquer en premier** — le script le tente sans bloquer et trace
-> l'échec éventuel. Le reste du runbook (config FAT32, mise à jour app, checklist)
-> est inchangé.
+Ce document-ci couvre les PHASES de fabrication manuelle et la **validation PHASE 4 sur Pi réel**, qui reste obligatoire quelle que soit la méthode de fabrication.
