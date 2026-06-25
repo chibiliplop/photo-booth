@@ -29,9 +29,9 @@ figé dans l'image SD par le mainteneur.
 ## Procédure complète
 
 La fabrication de l'image SD distribuable est décrite pas à pas dans
-[`../RUNBOOK_MAINTENEUR_CARTE_SD.md`](../docs/developper-et-maintenir/fabrication-image.md).
+[`fabrication-image.md`](../docs/developper-et-maintenir/fabrication-image.md).
 Le guide destiné à l'opérateur non-technique est
-[`../GUIDE_OPERATEUR.md`](../docs/monter-et-utiliser/3-preparer-un-evenement.md).
+[`3-preparer-un-evenement.md`](../docs/monter-et-utiliser/3-preparer-un-evenement.md).
 
 > **Build reproductible sans Pi** : ce dossier `deploy/` est consommé tel quel
 > par [`../image-builder/`](../image-builder/README.md) (CustoPiZer + GitHub
@@ -40,7 +40,7 @@ Le guide destiné à l'opérateur non-technique est
 
 ## ⚠️ Trois points de vigilance
 
-1. **Hôte web d'admin/debug** : `Photobooth.Admin` est **désactivé par défaut** (`Admin.Enabled=false` → rien n'écoute). Une fois activé (section `Admin` dans `photobooth.json`), il expose une console root via `sudo` gardée **uniquement** par `Admin.Pin` (+ CSRF/SameSite). Le `sudoers` ci-dessus accorde `NOPASSWD: ALL`. **Conséquence : n'activer que sur un réseau de confiance et toujours définir un PIN.** Détails : `../RUNBOOK_MAINTENEUR_CARTE_SD.md` §3.5.
+1. **Hôte web d'admin/debug** : `Photobooth.Admin` est **désactivé par défaut** (`Admin.Enabled=false` → rien n'écoute). Une fois activé (section `Admin` dans `photobooth.json`), il expose une console root via `sudo` gardée **uniquement** par `Admin.Pin` (+ CSRF/SameSite). Le `sudoers` ci-dessus accorde `NOPASSWD: ALL`. **Conséquence : n'activer que sur un réseau de confiance et toujours définir un PIN.** Détails : [`admin-debug.md`](../docs/developper-et-maintenir/admin-debug.md) (admin/sudoers).
 
 2. **Rendu logiciel** : en Avalonia 11, `--drm` (`StartLinuxDrm`) est *toujours*
    accéléré matériellement (GPU VC4), et `AVALONIA_RENDERER=software` est un

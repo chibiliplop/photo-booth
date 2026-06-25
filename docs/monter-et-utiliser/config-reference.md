@@ -56,8 +56,8 @@ Fichier de texte brut, une clé par ligne, format `CLE=valeur`.
 | `Mode` | `"fake"` | opérateur | `"http"` = vraie GoPro pilotée en Wi-Fi ; `"fake"` = mode démo sans GoPro (fausses photos) — **repasser sur `"http"` avant le vrai événement** | aucune contrainte de format |
 | `ControlBaseUrl` | `"http://10.5.5.9"` | mainteneur | URL de l'API de contrôle GoPro | obligatoire, ne doit pas être vide |
 | `MediaBaseUrl` | `"http://10.5.5.9:8080"` | mainteneur | URL du serveur média GoPro (téléchargement des photos) | obligatoire, ne doit pas être vide |
-| `KeepAliveHost` | `"10.5.5.9"` | mainteneur | IP cible des ping TCP keep-alive | aucune contrainte |
-| `KeepAlivePort` | `8554` | mainteneur | Port TCP keep-alive | doit être compris entre 1 et 65535 |
+| `KeepAliveHost` | `"10.5.5.9"` | mainteneur | IP cible des ping UDP keep-alive | aucune contrainte |
+| `KeepAlivePort` | `8554` | mainteneur | Port UDP keep-alive | doit être compris entre 1 et 65535 |
 | `KeepAliveIntervalSeconds` | `5` | mainteneur | Intervalle entre deux keep-alive (secondes) | aucune contrainte |
 | `RequestTimeoutSeconds` | `3` | mainteneur | Délai maximal d'une requête HTTP GoPro (secondes) | doit être > 0 |
 | `CaptureDeadlineSeconds` | `15` | mainteneur | Budget total pour récupérer la photo après déclenchement (secondes) | doit être > 0 |
@@ -113,7 +113,7 @@ Tous les numéros de broches sont au format **BCM** (de 0 à 27), comme sur le s
 | `Name` | `""` | avancé | Nom de la file CUPS — créée automatiquement au démarrage, ne pas modifier | aucune contrainte |
 | `Copies` | `1` | opérateur | Nombre d'exemplaires imprimés par photo | doit être > 0 |
 | `Media` | `"Postcard"` | opérateur | Format papier CUPS (ex : `"Postcard"` pour Canon Selphy CP1300, `"A4"` pour jet d'encre/laser) | aucune contrainte de format |
-| `Options` | `"fit-to-page=true"` | avancé | Options CUPS supplémentaires au format `clé=valeur` (séparées par `;`) | obligatoire si `Type=cups` |
+| `Options` | `"fit-to-page=true"` | avancé | Options CUPS supplémentaires au format `clé=valeur` (séparées par `;`) | aucune contrainte ; le défaut `fit-to-page=true` n'est qu'une valeur par défaut |
 | `LpCommand` | `"lp"` | mainteneur | Commande d'impression CUPS | obligatoire si `Type=cups` |
 | `OutputPath` | `"printed"` | avancé | Dossier de destination pour `Type=file` | obligatoire si `Type=file` |
 | `AllowMultiplePrints` | `false` | avancé | `true` = plusieurs impressions de la même photo pendant la fenêtre ; `false` = une seule impression puis retour au mode photo | aucune contrainte |

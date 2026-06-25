@@ -4,7 +4,7 @@
 
 | Projet | Rôle |
 | --- | --- |
-| `Photobooth.Core` | Logique pure : interfaces, workflow « acteur » (états Idle/Capturing/Recording/Degraded), options, modèles GoPro JSON, retry borné, télémétrie diagnostic (`Diagnostics/BoothTelemetry` : dernière raison d'échec d'impression). Aucune dépendance UI/hardware. |
+| `Photobooth.Core` | Logique pure : interfaces, workflow « acteur » (états Idle/Capturing/Recording/Degraded/ShuttingDown), options, modèles GoPro JSON, retry borné, télémétrie diagnostic (`Diagnostics/BoothTelemetry` : dernière raison d'échec d'impression). Aucune dépendance UI/hardware. |
 | `Photobooth.Adapters` | `HttpGoProClient` (HTTP/UDP réels) + `FakeGoProClient` ; GPIO/I2C Linux (`System.Device.Gpio`) + implémentations fake. |
 | `Photobooth.Admin` | Hôte web d'admin/debug embarqué (Kestrel, **opt-in** via `Admin.Enabled`, désactivé par défaut). Lecture : `InMemoryLogSink` (ring buffer Serilog des 500 derniers logs) + flux live (SSE), état borne/imprimante. Écriture : actions imprimante/CUPS, édition de `photobooth.json`, console shell, restart/reboot. Auth PIN optionnel + CSRF = seule frontière réseau↔root. Voir [`admin-debug.md`](admin-debug.md). Référencé par `Photobooth.App`. |
 | `Photobooth.App` | UI Avalonia (kiosk), composition root (DI + config + Serilog), `appsettings.json`, assets. |

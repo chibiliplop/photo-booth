@@ -14,7 +14,7 @@ Cinq projets en couches ; les dépendances ne vont que vers l'intérieur (`Core`
 | `Photobooth.Adapters` | Implémentations concrètes : `HttpGoProClient`/`FakeGoProClient` ; GPIO/I2C Linux + fakes ; adaptateurs d'impression (CUPS / fichier / no-op). |
 | `Photobooth.Admin` | Hôte web Kestrel embarqué, opt-in (`Admin.Enabled`), jamais fatal pour la borne. |
 | `Photobooth.App` | UI Avalonia (kiosk) + composition root : DI, configuration en couches, Serilog, point d'entrée. |
-| `Photobooth.Tests` | Tests xUnit (workflow, observabilité), pilotés par les fakes. |
+| `Photobooth.Tests` | Tests xUnit (workflow, observabilité, admin), pilotés par les fakes. |
 
 Pour l'architecture détaillée (workflow acteur, rendu DRM/FBDev, packaging) : [`docs/developper-et-maintenir/architecture.md`](docs/developper-et-maintenir/architecture.md).
 
