@@ -11,15 +11,6 @@ cas de pépin — sans clavier ni terminal.
 > propre borne (Raspberry Pi, écran, boutons, GoPro, câblage) et y installez
 > l'image fournie.
 
-## 🚀 Démarrer — installer une borne
-
-➡️ **[Guide d'installation pas à pas → `INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md)**
-
-C'est le point de départ : matériel requis et **câblage GPIO**, obtenir l'image,
-**flasher la carte SD avec Raspberry Pi Imager**, **régler le Wi-Fi de la GoPro et
-le thème sur la carte** (avant le 1ᵉʳ démarrage), puis brancher → la borne arrive
-**prête (bandeau vert)**.
-
 ## Ce que ça fait
 
 - Kiosk **plein écran** au démarrage, **relance automatique** en cas de crash.
@@ -31,14 +22,23 @@ le thème sur la carte** (avant le 1ᵉʳ démarrage), puis brancher → la born
 
 ## Documentation
 
-| Vous voulez… | Document |
+### Monter et utiliser une borne
+| Étape | Document |
 |---|---|
-| **Monter et installer** une borne (matériel, câblage, flashage, 1ᵉʳ boot) | **[`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md)** |
-| **Exploiter** la borne en événement (noms/fond/Wi-Fi, dépannage sur place) | [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md) |
-| **Fabriquer** l'image SD distribuable (reproductible, CI, sans Pi) | [`image-builder/README.md`](image-builder/README.md) + [`RUNBOOK_MAINTENEUR_CARTE_SD.md`](RUNBOOK_MAINTENEUR_CARTE_SD.md) |
-| **Développer** (build, test, lancer en local, sans GoPro) | [`README_NET8.md`](README_NET8.md) |
-| Mise en route **manuelle** sur un Pi (dev / debug) | [`DEPLOY_RASPBERRY_PI.md`](DEPLOY_RASPBERRY_PI.md) |
-| Architecture, décisions, risques | [`LINUX_MIGRATION_BLOCKERS.md`](LINUX_MIGRATION_BLOCKERS.md) |
+| Construire le matériel (câblage, lumière) | [`docs/monter-et-utiliser/1-electronique.md`](docs/monter-et-utiliser/1-electronique.md) |
+| Installer l'image (flasher, 1er démarrage) | [`docs/monter-et-utiliser/2-installation.md`](docs/monter-et-utiliser/2-installation.md) |
+| Préparer un événement (avant, à la maison) | [`docs/monter-et-utiliser/3-preparer-un-evenement.md`](docs/monter-et-utiliser/3-preparer-un-evenement.md) |
+| Le jour J (sur place) | [`docs/monter-et-utiliser/4-le-jour-j.md`](docs/monter-et-utiliser/4-le-jour-j.md) |
+| Référence des fichiers de config | [`docs/monter-et-utiliser/config-reference.md`](docs/monter-et-utiliser/config-reference.md) |
+
+### Développer ou maintenir
+| Sujet | Document |
+|---|---|
+| Développer (build, test, simulateur) | [`docs/developper-et-maintenir/developpement.md`](docs/developper-et-maintenir/developpement.md) |
+| Architecture & décisions | [`docs/developper-et-maintenir/architecture.md`](docs/developper-et-maintenir/architecture.md) |
+| Fabriquer l'image SD | [`docs/developper-et-maintenir/fabrication-image.md`](docs/developper-et-maintenir/fabrication-image.md) |
+| Déploiement manuel (dev/debug) | [`docs/developper-et-maintenir/deploiement-manuel.md`](docs/developper-et-maintenir/deploiement-manuel.md) |
+| Interface web d'admin/debug | [`docs/developper-et-maintenir/admin-debug.md`](docs/developper-et-maintenir/admin-debug.md) |
 
 ## Pour les développeurs (en bref)
 
@@ -48,4 +48,4 @@ dotnet test  Photobooth.sln
 dotnet run --project src/Photobooth.App   # local, mode démo (Espace/Entrée = photo, V = vidéo)
 ```
 
-Détails (simulateur GoPro, captures d'écran, configuration) : [`README_NET8.md`](README_NET8.md).
+Détails (simulateur GoPro, captures d'écran, configuration) : [`docs/developper-et-maintenir/developpement.md`](docs/developper-et-maintenir/developpement.md).
