@@ -1,8 +1,8 @@
-# Borne photo — guide de l'opérateur
+# Préparer un événement — à faire AVANT, à la maison
 
-Bienvenue ! Ce guide vous explique tout, pas à pas. Pas besoin d'être technicien : il suffit de brancher quelques câbles, et de modifier trois petits fichiers sur une carte mémoire quand vous changez d'événement. Prenez votre temps, tout est prévu pour que ce soit simple et sans risque.
-
-> **À qui s'adresse ce guide** : à l'**utilisateur d'une borne déjà montée** (assemblée par la personne qui l'a construite). Si c'est **vous** qui construisez la borne — vous fournissez le Raspberry Pi, l'écran, les boutons, la GoPro, le câblage — et installez le logiciel, commencez d'abord par **`INSTALLATION_BORNE.md`** (montage, câblage GPIO, flashage de la carte). Ce guide-ci prend la suite, une fois la borne assemblée.
+> **Quand ?** À la maison, avant le jour J, tranquillement, sans la pression de l'événement.
+>
+> **Le jour J sur place →** voir [4-le-jour-j.md](4-le-jour-j.md).
 
 ---
 
@@ -23,29 +23,6 @@ Vous fournissez vous-même : **un écran ou une télévision** (entrée HDMI) et
 
 ---
 
-## Brancher la borne
-
-L'ordre des branchements est **important**. Suivez-le exactement.
-
-**1. Allumez d'abord la GoPro.**
-   - Mettez la GoPro en marche.
-   - Vérifiez que son **Wi-Fi est activé**.
-   - Réglez sa **mise en veille automatique sur « Jamais »**.
-
-   > Pourquoi d'abord ? La borne cherche la GoPro dès qu'elle démarre. Règle à retenir : **« GoPro allumée, puis on branche le courant de la borne. »**
-
-**2. Branchez l'écran** (câble HDMI entre la borne et l'écran), allumez l'écran, sélectionnez la bonne entrée HDMI.
-
-**3. Branchez les boutons** (photo, vidéo) sur la borne, s'ils ne le sont pas déjà. Si votre borne a une lumière, branchez-la aussi (elle s'allume toute seule pendant la photo).
-
-**4. Branchez l'alimentation de la borne en DERNIER.** C'est ce qui l'allume. Patientez environ une minute.
-
-**5. Attendez le signal vert.** Un **bandeau VERT** indique : GoPro connectée, borne **prête**. Orange ou rouge → voir le dépannage plus bas.
-
-> En résumé : **GoPro allumée → écran → boutons → courant de la borne en dernier → bandeau vert = prête.**
-
----
-
 ## Changer les noms / l'année / le fond pour un événement
 
 Pour chaque nouvel événement, vous pouvez personnaliser l'écran : les **prénoms**, l'**année**, l'**image de fond**. Cela se fait **à la maison, sur un ordinateur**, avant le jour J. Aucun écran technique.
@@ -58,6 +35,8 @@ Pour chaque nouvel événement, vous pouvez personnaliser l'écran : les **prén
 - Ouvrez la carte. Vous y verrez un dossier **`photobooth`**. Ouvrez-le. Vous y trouverez aussi un fichier **`LISEZ-MOI.txt`** qui résume tout.
 
 ### Étape 2 — Modifier les fichiers (toujours MODIFIER, jamais créer ni renommer)
+
+> Pour le détail complet de chaque champ (valeurs autorisées, valeur par défaut, effet), consultez la **[référence de configuration](config-reference.md)**.
 
 **a) `photobooth.json`** — les prénoms, l'année, et (en bas) le mode.
    - Ouvrez-le (double-clic → Bloc-notes). Changez **uniquement le texte entre guillemets** :
@@ -99,7 +78,7 @@ GOPRO_PASSWORD=le-mot-de-passe-de-ma-gopro
 - Éjectez proprement la carte (clic droit → Éjecter / « Retirer en toute sécurité »).
 - Replacez-la dans la borne. Au prochain démarrage, les nouveaux réglages s'appliquent.
 
-> **Pièges à éviter :** ne **renommez** aucun fichier, n'en **créez** pas ; modifiez ceux qui existent. Si vous ne voyez pas les extensions (`.json`, `.txt`), pas de souci : modifiez les fichiers tels qu'ils apparaissent.
+> **Pièges à éviter :** ne **renommez** aucun fichier, n'en **créez** pas ; modifiez ceux qui existent. Si vous ne voyez pas les extensions (`.json`, `.txt`), pas de souci : modifiez les fichiers tels qu'ils apparaissent — Windows peut masquer les extensions, mais les fichiers sont bien là.
 
 ---
 
@@ -130,65 +109,6 @@ Vous pouvez tout tester **la veille, sans la GoPro**, grâce au **mode test** : 
 
 ---
 
-## Si l'écran reste noir / si la photo ne s'affiche pas
+## Le jour J (sur place)
 
-Pas de panique. La borne se relance toute seule. Procédez dans l'ordre.
-
-### Niveau 1 — Écran noir (rien ne s'affiche)
-
-Presque toujours un problème de courant ou de câble.
-- Écran **allumé** et sur la bonne entrée **HDMI** ?
-- **Alimentation de la borne** bien branchée (prise + borne) ?
-- **Débranchez puis rebranchez l'alimentation de la borne.** Attendez ~1 minute : elle redémarre seule.
-- Câble **HDMI** bien enfoncé des deux côtés ?
-
-### Niveau 2 — Bandeau ORANGE qui reste (GoPro pas trouvée)
-
-L'écran marche, mais la borne ne « voit » pas la caméra.
-- GoPro **allumée**, **Wi-Fi activé**, veille sur « Jamais » ?
-- **Éteignez puis rallumez la GoPro.** Le bandeau repasse souvent au vert tout seul.
-- Si vous avez changé de GoPro, vérifiez que `wifi.txt` correspond bien à **cette** caméra.
-
-### Niveau 3 — Bandeau ROUGE en cours de soirée (GoPro décrochée)
-
-Souvent la GoPro s'est endormie ou la batterie est faible.
-- **Rallumez la GoPro** (rebranchez-la sur le secteur si besoin).
-- La borne **se reconnecte automatiquement** : attendez le retour du vert.
-- Sinon, refaites un **débranchement/rebranchement de l'alimentation de la borne**.
-
-> Règle d'or : **9 fois sur 10, éteindre/rallumer la GoPro ou débrancher/rebrancher la borne règle le problème.** Vous ne pouvez rien casser.
-
-### Interface de dépannage à distance (avancé — seulement si on vous le demande)
-
-La borne dispose d'une petite **page web de dépannage** que la personne qui l'entretient peut utiliser à distance. Elle est **éteinte par défaut** et vous n'en avez **pas besoin** pour un événement normal.
-
-Si votre mainteneur vous demande de l'activer, c'est une seule chose : dans `photobooth.json` (la même carte mémoire que les prénoms), ajoutez le bloc qu'il vous indique, **avec toujours un code PIN** :
-
-```
-  "Admin": { "Enabled": true, "Pin": "votre-code-ici" }
-```
-
-> ⚠️ **Toujours un PIN**, et seulement sur demande : cette page permet de piloter la borne. Ne l'activez pas « pour voir », et remettez `"Enabled": false` (ou retirez le bloc) une fois le dépannage terminé.
-
-Une fois activée, **au démarrage la borne affiche à l'écran l'adresse web à ouvrir** (par ex. `http://10.5.5.x:8080`). Notez-la, puis **appuyez sur le bouton photo** : l'écran disparaît et la borne démarre normalement — ce premier appui ne prend pas de photo.
-
----
-
-## Ranger / éteindre proprement
-
-1. **Débranchez l'alimentation de la borne.** Il n'y a pas de bouton « arrêter » : couper le courant est la façon normale d'éteindre. La lumière s'éteint automatiquement.
-2. **Éteignez la GoPro** et mettez-la à charger.
-3. Débranchez le **câble HDMI** et les **boutons**.
-4. Laissez la **carte mémoire dans la borne** (sauf si vous préparez le prochain événement).
-5. Rangez chaque élément dans la boîte.
-
-> Rien à « sauvegarder » avant de débrancher : la borne est faite pour qu'on lui coupe simplement le courant.
-
----
-
-### En cas de doute
-
-- **GoPro allumée d'abord, puis courant de la borne en dernier, et on attend le bandeau vert.**
-- En cas de souci : **on éteint/rallume la GoPro, ou on débranche/rebranche la borne.**
-
-Bon événement !
+Branchement, lecture des bandeaux, dépannage terrain, ranger/éteindre → **[4-le-jour-j.md](4-le-jour-j.md)**.
