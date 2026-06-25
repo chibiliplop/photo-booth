@@ -2,18 +2,18 @@
 
 > **Quel document utiliser ?**
 > - **Installer une borne à partir de l'image distribuable** (carte SD turnkey) →
->   [`INSTALLATION_BORNE.md`](INSTALLATION_BORNE.md) (flashage Pi Imager, etc.).
+>   [`../monter-et-utiliser/2-installation.md`](../monter-et-utiliser/2-installation.md) (flashage Pi Imager, piège Imager, etc.).
 > - **Fabriquer l'image distribuable** (mainteneur) →
->   [`RUNBOOK_MAINTENEUR_CARTE_SD.md`](RUNBOOK_MAINTENEUR_CARTE_SD.md) + [`image-builder/`](image-builder/README.md).
+>   [`fabrication-image.md`](fabrication-image.md) (chemin de distribution complet).
 > - **Ce document** = **mise en route MANUELLE** sur un Pi (copie `scp`, install à
 >   la main, systemd) — utile pour le **développement / debug** ou comprendre les
 >   briques. Ce n'est **pas** le chemin de distribution. Les valeurs « système »
 >   (paquets, service, rendu) restent la référence ; pour une borne livrable,
 >   préférez l'image et le runbook.
 
-Ce guide déploie la nouvelle application **Photobooth.App** (.NET 8 / Avalonia) sur un Raspberry Pi 3 en mode kiosk plein écran, orientée **stabilité**. Il remplace l'ancienne app UWP (qui reste dans `CS/` à titre de référence).
+Ce guide déploie **Photobooth.App** (.NET 8 / Avalonia) sur un Raspberry Pi 3 en mode kiosk plein écran.
 
-> Résumé des choix (voir `LINUX_MIGRATION_BLOCKERS.md` et le plan) : **Raspberry Pi OS Lite 64-bit**, **rendu logiciel** (le GPU VC4 du Pi 3 est une source documentée de plantages EGL/écran noir), **self-contained** `linux-arm64`, **trimming désactivé**, service **systemd `Restart=always`**.
+> Résumé des choix : **Raspberry Pi OS Lite 64-bit**, **rendu `--drm`** (KMS/DRM, accéléré GPU — voir [architecture.md § Rendu](architecture.md) pour le détail et le fallback `--fbdev`), **self-contained** `linux-arm64`, **trimming désactivé**, service **systemd `Restart=always`**.
 
 ---
 
