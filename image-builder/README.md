@@ -2,9 +2,9 @@
 
 Construit l'image distribuable **`photobooth-dist.img.xz`** *sans Pi physique*, de
 façon **reproductible et versionnée**, en partant de l'image Raspberry Pi OS Lite
-64-bit officielle. C'est la méthode **principale** de fabrication — le pendant CI/CD
-des PHASES 1-3 et 5 décrites dans
-[`../docs/developper-et-maintenir/fabrication-image.md`](../docs/developper-et-maintenir/fabrication-image.md).
+64-bit officielle. C'est la mise en œuvre de l'**option §10 du
+[RUNBOOK](../RUNBOOK_MAINTENEUR_CARTE_SD.md)**, désormais méthode **principale**
+(distribution « à n'importe qui » → le déclencheur du §10 est franchi).
 
 ## Ce que ça remplace (et ce que ça ne remplace PAS)
 
@@ -42,7 +42,7 @@ et la CI y copient `deploy/` + `publish/` dans `scripts/files/` le temps du buil
 > (bloc « 3.4bis ») les privilèges de l'hôte web d'admin/debug : `sudoers.d/photobooth`
 > (`/etc/sudoers.d/`, `0440`, validé par `visudo -c`) et `photobooth-write-config.sh`
 > (`/usr/local/sbin/`, `0755`). L'hôte reste **opt-in** (`Admin.Enabled=false` par défaut).
-> Voir [fabrication-image.md §3.5](../docs/developper-et-maintenir/fabrication-image.md).
+> Voir [RUNBOOK §3.5](../RUNBOOK_MAINTENEUR_CARTE_SD.md).
 
 ## Build en local (recommandé pour la 1ʳᵉ fois)
 
@@ -82,7 +82,7 @@ et l'avertit dans les logs.
 **Donc : valide d'abord en local** (`build-local.sh`, flash, boot sur Pi,
 `mount | grep overlay`). Si l'overlay ne « prend » pas via la CI :
 1. build en `PHOTOBOOTH_OVERLAY=0`, puis activer l'overlay manuellement sur le
-   Pi de référence (fabrication-image.md §5.1) avant un clone ponctuel ; ou
+   Pi de référence (RUNBOOK §5.1) avant un clone ponctuel ; ou
 2. corriger l'étape overlay du script une fois la cause initramfs comprise.
 
 ## Distribuer (PHASE 6) — le piège Imager

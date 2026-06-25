@@ -29,7 +29,7 @@ figé dans l'image SD par le mainteneur.
 ## Procédure complète
 
 La fabrication de l'image SD distribuable est décrite pas à pas dans
-[`../docs/developper-et-maintenir/fabrication-image.md`](../docs/developper-et-maintenir/fabrication-image.md).
+[`../RUNBOOK_MAINTENEUR_CARTE_SD.md`](../RUNBOOK_MAINTENEUR_CARTE_SD.md).
 Le guide destiné à l'opérateur non-technique est
 [`../GUIDE_OPERATEUR.md`](../GUIDE_OPERATEUR.md).
 
