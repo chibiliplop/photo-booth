@@ -5,13 +5,9 @@
 > **Ce projet distribue un LOGICIEL, pas un produit matériel** : vous fournissez et
 > assemblez vous-même le matériel (Pi, écran, boutons, lumière éventuelle, GoPro,
 > câblage). Profil : à l'aise avec un PC ; le câblage GPIO demande un minimum de
-> bricolage électronique (voir §1.1).
+> bricolage électronique (voir [1-electronique.md](1-electronique.md)).
 > **Résultat** : une carte SD qui, une fois insérée et branchée, démarre **seule**
 > en plein écran et est prête dès le bandeau vert.
->
-> Autres docs : le **build** de l'image → [`RUNBOOK_MAINTENEUR_CARTE_SD.md`](RUNBOOK_MAINTENEUR_CARTE_SD.md)
-> et [`image-builder/README.md`](image-builder/README.md). L'usage **événement**
-> (changer noms/fond/Wi-Fi, dépannage sur place) → [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md).
 
 ---
 
@@ -46,57 +42,16 @@ vous** :
 | **Lecteur de carte** | Fente SD du PC ou adaptateur USB. |
 | **Écran** | Entrée **HDMI** + son câble. |
 | **GoPro** | En Wi-Fi (allumage/veille : voir le guide opérateur). |
-| **Boutons / lumière** | Bouton photo, bouton vidéo (+ lumière optionnelle), câblés sur le header GPIO → **§1.1**. |
+| **Boutons / lumière** | Bouton photo, bouton vidéo (+ lumière optionnelle), câblés sur le header GPIO → voir [1-electronique.md](1-electronique.md). |
 | **Alimentation** | L'alim **officielle** du Pi (sous-alimenter = source n°1 d'instabilité). |
 
 > **Compatibilité** : le **même** `.img.xz` boote sur Pi 3 et Pi 4. Il faut juste
 > que le **modèle visé ait été validé une fois** par le mainteneur (rendu, boutons,
 > GoPro). En cas de doute sur le modèle, demandez au mainteneur.
 
-### 1.1 Câblage des boutons et de la lumière (GPIO)
-
-Numérotation **BCM** (les numéros « GPIO », pas la position physique des broches).
-Broches **par défaut** :
-
-| Fonction | Broche (BCM) par défaut | Câblage |
-|---|---|---|
-| Bouton **photo** | **GPIO 18** | bouton entre la broche et **GND** (masse). |
-| Bouton **vidéo** | **GPIO 20** | bouton entre la broche et **GND**. |
-| **Lumière** (optionnelle) | **GPIO 17** | sortie **active-high** (HIGH = allumé). |
-
-- **Pull-up externe ~10 kΩ recommandé** sur GPIO 18 et 20 (vers 3,3 V) : le pull-up
-  interne du Pi 3 est peu fiable. Le bouton tire la broche à la masse quand on
-  appuie.
-- ⚠️ **Lumière** : une broche GPIO **ne pilote pas** une lampe directement (3,3 V,
-  quelques mA). Passez par un **relais ou un MOSFET** commandé par GPIO 17. Sans
-  lumière ? Voir `LightEnabled=false` en §1.2.
-- (Optionnel) **capteur de lumière MAX44009** sur I2C bus 1 (GPIO2/SDA, GPIO3/SCL),
-  adresse `0x4A` — désactivé par défaut.
-
-### 1.2 Changer les broches GPIO (si votre câblage diffère)
-
-Les broches sont **configurables** sans recompiler : tout est dans le bloc
-`Hardware` du fichier **`photobooth.json`** (sur la carte SD, voir §4). Adaptez-le
-à VOTRE câblage :
-
-```jsonc
-"Hardware": {
-  "Mode": "auto",        // auto = GPIO reels sur Pi ; fake = clavier/sans GPIO
-  "PhotoButtonPin": 18,   // broche BCM du bouton photo
-  "VideoButtonPin": 20,   // broche BCM du bouton vidéo
-  "LightEnabled": true,   // false = borne SANS lumière (la broche n'est jamais ouverte)
-  "LightPin": 17          // broche BCM de la sortie lumière (ignorée si LightEnabled=false)
-}
-```
-
-- Valeurs BCM **0 à 27**, **sans doublon**. Une valeur invalide n'empêche **pas**
-  le démarrage : la borne affiche un **bandeau rouge** à l'écran (pas de crash).
-- `Mode: "auto"` → comportement normal : les GPIO réels sont utilisés sur Raspberry Pi.
-  `Mode: "fake"` → aucun GPIO n'est ouvert ; utile pour tester l'interface au clavier.
-- `LightEnabled: false` → borne **sans lumière** : tout fonctionne normalement, la
-  broche lumière n'est jamais utilisée.
-- Ce bloc est marqué *avancé* dans le fichier : l'**opérateur** d'événement n'y
-  touche pas ; c'est **vous, au montage**, qui l'ajustez une fois.
+> **Câblage GPIO** (broches, résistances, lumière, capteur de luminosité) : tout
+> est dans [1-electronique.md](1-electronique.md) — la référence unique pour
+> l'électronique de la borne.
 
 ---
 
@@ -114,7 +69,7 @@ C'est tout — passez directement à l'**étape 3** (flashage).
 - En CI : *Actions* → *Build SD image* → *Run workflow* (ou pousser un tag `v*`),
   puis téléchargez l'artefact / l'asset de Release.
 - En local : `image-builder/build-local.sh` (WSL2/Linux + Docker).
-- Détails : [`image-builder/README.md`](image-builder/README.md), RUNBOOK §10.
+- Détails : `image-builder/README.md`, RUNBOOK §10.
 
 > **N'extrayez pas le `.xz`** : Raspberry Pi Imager (et Balena Etcher) le
 > décompressent à la volée.
@@ -186,15 +141,8 @@ terminal, aucune manip sur le Pi.
 > normal. ⚠️ Si Windows propose de **formater** un disque inconnu, cliquez
 > **Annuler** (c'est la partition Linux, on n'y touche pas).
 
-Ouvrez le lecteur **`bootfs`**, puis le dossier **`photobooth`**. Vous y trouverez :
-
-| Fichier | À régler | Indispensable ? |
-|---|---|---|
-| **`wifi.txt`** | **SSID + mot de passe de la GoPro** | **Oui** — sinon la borne ne trouve pas la GoPro |
-| `photobooth.json` | Noms, année ; mode `http` (réel) ou `fake` (démo). Contient aussi le bloc **`Hardware`** (broches GPIO → §1.2) | recommandé |
-| `fond.jpg` | Remplacer par votre image (garder ce nom exact) | optionnel |
-| `admin.txt` | **Avancé** : mot de passe SSH `pi` (voir §6) | non, l'opérateur n'y touche pas |
-| `LISEZ-MOI.txt` | notice (ne pas éditer) | — |
+Ouvrez le lecteur **`bootfs`**, puis le dossier **`photobooth`**. Les fichiers éditables
+et leur rôle sont décrits dans [config-reference.md](config-reference.md).
 
 ### Le Wi-Fi de la GoPro (le point clé pour un boot vert)
 
@@ -219,8 +167,7 @@ jusqu'à ce que vous corrigiez `wifi.txt`.
 
 > **Règles** : on **modifie** les fichiers existants, on n'en **crée**/ne
 > **renomme** aucun. Le pas-à-pas complet (mode test sans GoPro, pièges
-> d'extensions cachées sous Windows) est dans
-> [`GUIDE_OPERATEUR.md`](GUIDE_OPERATEUR.md) — **le** guide à donner à l'exploitant.
+> d'extensions cachées sous Windows) est dans le guide opérateur.
 
 Quand c'est fait, éjectez proprement la carte (« Retirer en toute sécurité »).
 
@@ -244,6 +191,21 @@ kiosk, relance auto en cas de crash. Vous n'avez **aucune** commande à taper.
 > Pour reconfigurer **plus tard** : éteindre (couper le courant), sortir la carte,
 > l'éditer sur le PC (comme au §4), la remettre. Les changements s'appliquent au
 > redémarrage suivant.
+
+### Test d'acceptation avant de quitter l'installation
+
+Avant de quitter les lieux, vérifiez en **mode test (sans GoPro)** que la borne
+fonctionne :
+
+- L'**écran** affiche bien le kiosk plein écran (pas un bureau Linux, pas un écran
+  noir).
+- Les **boutons** photo et vidéo déclenchent une action visible à l'écran (décompte
+  ou prise de vue simulée).
+- La **lumière** (si câblée) s'allume pendant la séquence photo.
+
+Pour activer le mode test sans GoPro, passez `Gopro.Mode` à `"fake"` dans
+`photobooth.json` — voir [3-preparer-un-evenement.md](3-preparer-un-evenement.md)
+pour le détail de la procédure.
 
 ---
 
@@ -273,8 +235,7 @@ carte). SSH est réservé au mainteneur.
   (étape 3). ⚠️ Le reflashage **efface la carte** → les réglages d'événement
   (noms, fond, Wi-Fi) repartent des modèles : reconfigurez via l'**étape 4**.
 - **Mise à jour de l'app seulement, sans reflasher** (opération mainteneur en
-  SSH) : voir la section **« MISE À JOUR DE L'APP »** du
-  [RUNBOOK](RUNBOOK_MAINTENEUR_CARTE_SD.md).
+  SSH) : voir la section **« MISE À JOUR DE L'APP »** du RUNBOOK.
 
 ---
 
