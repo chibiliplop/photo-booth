@@ -3,7 +3,7 @@
 Construit l'image distribuable **`photobooth-dist.img.xz`** *sans Pi physique*, de
 façon **reproductible et versionnée**, en partant de l'image Raspberry Pi OS Lite
 64-bit officielle. C'est la mise en œuvre de l'**option §10 du
-[RUNBOOK](../RUNBOOK_MAINTENEUR_CARTE_SD.md)**, désormais méthode **principale**
+[RUNBOOK](../docs/developper-et-maintenir/fabrication-image.md)**, désormais méthode **principale**
 (distribution « à n'importe qui » → le déclencheur du §10 est franchi).
 
 ## Ce que ça remplace (et ce que ça ne remplace PAS)
@@ -42,7 +42,7 @@ et la CI y copient `deploy/` + `publish/` dans `scripts/files/` le temps du buil
 > (bloc « 3.4bis ») les privilèges de l'hôte web d'admin/debug : `sudoers.d/photobooth`
 > (`/etc/sudoers.d/`, `0440`, validé par `visudo -c`) et `photobooth-write-config.sh`
 > (`/usr/local/sbin/`, `0755`). L'hôte reste **opt-in** (`Admin.Enabled=false` par défaut).
-> Voir [RUNBOOK §3.5](../RUNBOOK_MAINTENEUR_CARTE_SD.md).
+> Voir [RUNBOOK §3.5](../docs/developper-et-maintenir/fabrication-image.md).
 
 ## Build en local (recommandé pour la 1ʳᵉ fois)
 

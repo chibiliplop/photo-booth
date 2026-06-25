@@ -69,7 +69,7 @@ C'est tout — passez directement à l'**étape 3** (flashage).
 - En CI : *Actions* → *Build SD image* → *Run workflow* (ou pousser un tag `v*`),
   puis téléchargez l'artefact / l'asset de Release.
 - En local : `image-builder/build-local.sh` (WSL2/Linux + Docker).
-- Détails : `image-builder/README.md`, RUNBOOK §10.
+- Détails : [`image-builder/README.md`](../../image-builder/README.md), [fabrication-image.md](../developper-et-maintenir/fabrication-image.md) §10.
 
 > **N'extrayez pas le `.xz`** : Raspberry Pi Imager (et Balena Etcher) le
 > décompressent à la volée.
@@ -235,7 +235,7 @@ carte). SSH est réservé au mainteneur.
   (étape 3). ⚠️ Le reflashage **efface la carte** → les réglages d'événement
   (noms, fond, Wi-Fi) repartent des modèles : reconfigurez via l'**étape 4**.
 - **Mise à jour de l'app seulement, sans reflasher** (opération mainteneur en
-  SSH) : voir la section **« MISE À JOUR DE L'APP »** du RUNBOOK.
+  SSH) : voir la section **« MISE À JOUR DE L'APP »** de [fabrication-image.md](../developper-et-maintenir/fabrication-image.md).
 
 ---
 
