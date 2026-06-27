@@ -46,6 +46,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
     private bool _started;
     private byte[]? _lastCapturedPhoto;
     private DateTimeOffset _lastCapturedAt = DateTimeOffset.MinValue;
+    private DateTimeOffset _ignorePhotoCaptureUntil = DateTimeOffset.MinValue;
     private CancellationTokenSource? _lifetimeCts;
     private Task? _consumerTask;
     private Task? _keepAliveTask;
@@ -157,12 +158,16 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
                     if (ShouldPhotoButtonPrint())
                     {
                         await PrintLastPhotoAsync(lifetime);
+                        IgnoreBriefPhotoRepresses();
+                        DrainButtonCommands();
                         if (!_printerOpt.AllowMultiplePrints)
                         {
                             _lastCapturedPhoto = null; // ferme la fenêtre d'impression
                             _display.SetPrintAvailable(false);
                         }
                     }
+                    else if (ShouldIgnorePhotoCaptureAfterPrint())
+                        _log.LogDebug("Photo press ignored after photo-button print.");
                     else
                         await RunPhotoSequenceAsync(lifetime);
                 }
@@ -320,6 +325,12 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
         var elapsed = DateTimeOffset.UtcNow - _lastCapturedAt;
         return elapsed <= TimeSpan.FromSeconds(_printerOpt.PhotoButtonPrintWindowSeconds);
     }
+
+    private void IgnoreBriefPhotoRepresses() =>
+        _ignorePhotoCaptureUntil = DateTimeOffset.UtcNow.AddSeconds(1);
+
+    private bool ShouldIgnorePhotoCaptureAfterPrint() =>
+        _printerOpt.IsPhotoButtonWindowTrigger && DateTimeOffset.UtcNow <= _ignorePhotoCaptureUntil;
 
     private async Task PrintLastPhotoAsync(CancellationToken lifetime)
     {

@@ -51,18 +51,25 @@ internal sealed class RecordingDisplay : IPhotoDisplay
 
 internal sealed class RecordingPrinter : IPrinterAdapter
 {
+    private int _printCount;
+    private int _printStartedCount;
+
     public bool IsEnabled { get; set; }
     public bool ThrowOnPrint { get; set; }
-    public int PrintCount { get; private set; }
+    public int DelayMs { get; set; }
+    public int PrintCount => Volatile.Read(ref _printCount);
+    public int PrintStartedCount => Volatile.Read(ref _printStartedCount);
     public byte[]? LastPrinted { get; private set; }
 
-    public Task PrintAsync(byte[] imageData, CancellationToken ct = default)
+    public async Task PrintAsync(byte[] imageData, CancellationToken ct = default)
     {
+        Interlocked.Increment(ref _printStartedCount);
         if (ThrowOnPrint)
             throw new System.InvalidOperationException("lp failed with exit code 1: unknown destination");
-        PrintCount++;
+        if (DelayMs > 0)
+            await Task.Delay(DelayMs, ct);
+        Interlocked.Increment(ref _printCount);
         LastPrinted = imageData.ToArray();
-        return Task.CompletedTask;
     }
 }
 

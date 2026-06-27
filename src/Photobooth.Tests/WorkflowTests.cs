@@ -246,6 +246,40 @@ public class WorkflowTests
     }
 
     [Fact]
+    public async Task Photo_button_print_window_drops_represses_queued_during_print()
+    {
+        var scripted = new ScriptedGoProClient();
+        var rig = TestHarness.Build(
+            scripted,
+            printerEnabled: true,
+            tunePrinter: p =>
+            {
+                p.Type = "file";
+                p.TriggerMode = "photo-button-window";
+                p.PhotoButtonPrintWindowSeconds = 15;
+            });
+        rig.Printer.DelayMs = 150;
+
+        await rig.Workflow.StartAsync();
+        try
+        {
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Display.PhotoCount >= 1 && rig.Workflow.State == BoothState.Idle));
+            Assert.Equal(1, scripted.TriggerCount);
+
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Printer.PrintStartedCount == 1));
+
+            rig.Workflow.Submit(new BoothCommand.PhotoRequested());
+
+            Assert.True(await TestHarness.WaitForAsync(() => rig.Printer.PrintCount == 1));
+            await Task.Delay(250);
+            Assert.Equal(1, scripted.TriggerCount);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
+
+    [Fact]
     public async Task Auto_print_submits_job_after_capture()
     {
         var rig = TestHarness.Build(
