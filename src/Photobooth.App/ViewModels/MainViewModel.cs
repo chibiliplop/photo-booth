@@ -17,9 +17,8 @@ namespace Photobooth.App.ViewModels;
 /// Reproduces the original 3-rotated-cards behaviour: each new message/photo lands on the next card and
 /// that card is brought to the front.
 /// </summary>
-public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
+public sealed class MainViewModel : ViewModelBase, IPreparedPhotoDisplay
 {
-    private const int DisplayDecodeWidth = 800;
     private const string DefaultBackground = "avares://Photobooth.App/Assets/background.jpg";
 
     // Operator status colours (banner background + connectivity dot).
@@ -30,6 +29,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
 
     private readonly ILogger<MainViewModel> _log;
     private readonly bool _printerEnabled;
+    private readonly int _displayDecodeWidth;
     private readonly int _printWindowSeconds;
     private int _currentFrame;
     private bool _isRecording;
@@ -49,7 +49,7 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     private bool _isPrintAvailable;
     private int _printCountdown;
 
-    public CardViewModel[] Cards { get; } = { new(), new(), new() };
+    public CardViewModel[] Cards { get; }
 
     public string Names { get; }
     public string Year { get; }
@@ -67,6 +67,8 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     public IBrush TitleBrush { get; }
     public IBrush MessageBrush { get; }
     public FontFamily TitleFont { get; }
+    public bool EnableSlideAnimation { get; }
+    public int PhotoSlideDurationMs { get; }
 
     /// <summary>True while a take is being filmed: drives the blinking REC, the film overlay and the remaining-time countdown.</summary>
     public bool IsRecording
@@ -221,11 +223,21 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
     public void ClearAdminAddress() =>
         Dispatcher.UIThread.Post(() => AdminAddress = null);
 
-    public MainViewModel(IOptions<ThemeOptions> theme, IOptions<PrinterOptions> printer, ILogger<MainViewModel> log)
+    public MainViewModel(IOptions<ThemeOptions> theme, IOptions<PrinterOptions> printer, IOptions<UiPerformanceOptions> uiPerformance, ILogger<MainViewModel> log)
     {
         _log = log;
         _printerEnabled = !printer.Value.IsDisabled;
         _printWindowSeconds = printer.Value.PhotoButtonPrintWindowSeconds;
+        var ui = uiPerformance.Value;
+        _displayDecodeWidth = Math.Max(320, ui.EffectiveDecodeWidth);
+        EnableSlideAnimation = ui.EffectiveEnableSlideAnimation;
+        PhotoSlideDurationMs = ui.EffectiveSlideDurationMs;
+        Cards = new[]
+        {
+            new CardViewModel(ui.EnableCardShadows),
+            new CardViewModel(ui.EnableCardShadows),
+            new CardViewModel(ui.EnableCardShadows)
+        };
         var t = theme.Value;
         Names = t.Names;
         Year = t.Year;
@@ -263,8 +275,27 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
 
     public void ShowPhoto(byte[] imageData)
     {
+        var prepared = PreparePhoto(imageData);
+        if (prepared is not null)
+            ShowPreparedPhoto(prepared);
+    }
+
+    public IPreparedPhoto? PreparePhoto(byte[] imageData)
+    {
         var bitmap = TryDecode(imageData);
-        if (bitmap is null) return;
+        return bitmap is null ? null : new PreparedPhoto(bitmap);
+    }
+
+    public void ShowPreparedPhoto(IPreparedPhoto preparedPhoto)
+    {
+        if (preparedPhoto is not PreparedPhoto prepared)
+        {
+            preparedPhoto.Dispose();
+            return;
+        }
+
+        var bitmap = prepared.TakeBitmap();
+        prepared.Dispose();
         Dispatcher.UIThread.Post(() =>
         {
             ClearIdle();
@@ -418,12 +449,30 @@ public sealed class MainViewModel : ViewModelBase, IPhotoDisplay
         Cards[oldest].ZIndex        = 1;
     }
 
+    private sealed class PreparedPhoto(Bitmap bitmap) : IPreparedPhoto
+    {
+        private Bitmap? _bitmap = bitmap;
+
+        public Bitmap TakeBitmap()
+        {
+            var bitmap = _bitmap ?? throw new ObjectDisposedException(nameof(PreparedPhoto));
+            _bitmap = null;
+            return bitmap;
+        }
+
+        public void Dispose()
+        {
+            _bitmap?.Dispose();
+            _bitmap = null;
+        }
+    }
+
     private Bitmap? TryDecode(byte[] data)
     {
         try
         {
             using var ms = new MemoryStream(data);
-            return Bitmap.DecodeToWidth(ms, DisplayDecodeWidth);
+            return Bitmap.DecodeToWidth(ms, _displayDecodeWidth);
         }
         catch (Exception ex)
         {

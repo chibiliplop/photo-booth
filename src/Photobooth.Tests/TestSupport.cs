@@ -17,11 +17,13 @@ using Photobooth.Core.Workflow;
 namespace Photobooth.Tests;
 
 /// <summary>Captures what the workflow asked the UI to render. Thread-safe (workflow calls from a background thread).</summary>
-internal sealed class RecordingDisplay : IPhotoDisplay
+internal sealed class RecordingDisplay : IPreparedPhotoDisplay
 {
     private readonly object _lock = new();
     private readonly List<string> _messages = new();
     private int _photoCount;
+    private int _preparedPhotoCount;
+    private int _preparedShowCount;
 
     private readonly List<int> _videoCountdowns = new();
 
@@ -30,9 +32,22 @@ internal sealed class RecordingDisplay : IPhotoDisplay
     public string? Status { get; private set; }
     public BoothStatusLevel? Connectivity { get; private set; }
     public int PhotoCount => Volatile.Read(ref _photoCount);
+    public int PreparedPhotoCount => Volatile.Read(ref _preparedPhotoCount);
+    public int PreparedShowCount => Volatile.Read(ref _preparedShowCount);
 
     public void ShowMessage(string text) { lock (_lock) _messages.Add(text); }
     public void ShowPhoto(byte[] imageData) => Interlocked.Increment(ref _photoCount);
+    public IPreparedPhoto? PreparePhoto(byte[] imageData)
+    {
+        Interlocked.Increment(ref _preparedPhotoCount);
+        return new RecordedPreparedPhoto(imageData);
+    }
+    public void ShowPreparedPhoto(IPreparedPhoto preparedPhoto)
+    {
+        preparedPhoto.Dispose();
+        Interlocked.Increment(ref _preparedShowCount);
+        Interlocked.Increment(ref _photoCount);
+    }
     public void Flash() { }
     public void SetPrintAvailable(bool available) { }
     public void ShowVideoCountdown(int seconds) { lock (_lock) _videoCountdowns.Add(seconds); }
@@ -43,6 +58,13 @@ internal sealed class RecordingDisplay : IPhotoDisplay
     }
     public void SetStatus(string? status, BoothStatusLevel level = BoothStatusLevel.Info) => Status = status;
     public void SetConnectivity(BoothStatusLevel level) => Connectivity = level;
+
+
+    private sealed class RecordedPreparedPhoto(byte[] imageData) : IPreparedPhoto
+    {
+        private byte[]? _imageData = imageData;
+        public void Dispose() => _imageData = null;
+    }
 
     public bool SawMessage(string m) { lock (_lock) return _messages.Contains(m); }
     public IReadOnlyList<string> Messages { get { lock (_lock) return _messages.ToList(); } }
@@ -174,7 +196,7 @@ internal static class TestHarness
         var telemetry = new BoothTelemetry();
         var wf = new PhotoboothWorkflow(
             gopro, light, display, printer, telemetry,
-            Options.Create(timings), Options.Create(gopt), Options.Create(popt),
+            Options.Create(timings), Options.Create(gopt), Options.Create(popt), Options.Create(new UiPerformanceOptions()),
             NullLogger<PhotoboothWorkflow>.Instance);
         return new Rig(wf, display, light, gopro, printer, telemetry);
     }

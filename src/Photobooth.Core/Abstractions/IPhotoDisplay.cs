@@ -59,3 +59,18 @@ public interface IPhotoDisplay
     /// </summary>
     void SetConnectivity(BoothStatusLevel level);
 }
+
+/// <summary>A photo decoded/resized by the UI layer and ready to be shown later.</summary>
+public interface IPreparedPhoto : System.IDisposable
+{
+}
+
+/// <summary>
+/// Optional fast path for slideshows: the workflow can ask the UI to decode/resize a photo before the
+/// visible transition, then show that prepared photo at the next tick.
+/// </summary>
+public interface IPreparedPhotoDisplay : IPhotoDisplay
+{
+    IPreparedPhoto? PreparePhoto(byte[] imageData);
+    void ShowPreparedPhoto(IPreparedPhoto preparedPhoto);
+}

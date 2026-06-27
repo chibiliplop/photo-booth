@@ -35,11 +35,15 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
     private readonly TimingOptions _timings;
     private readonly GoProOptions _goproOpt;
     private readonly PrinterOptions _printerOpt;
+    private readonly UiPerformanceOptions _uiOpt;
+    private readonly IPreparedPhotoDisplay? _preparedDisplay;
     private readonly ILogger<PhotoboothWorkflow> _log;
 
     private readonly Channel<BoothCommand> _channel;
     private readonly SemaphoreSlim _goproGate = new(1, 1);
     private readonly Random _rand = new();
+    private readonly Dictionary<string, byte[]> _slideshowDataCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Queue<string> _slideshowDataCacheOrder = new();
 
     private int _stateValue = (int)BoothState.Idle;
     private long _recordingEpoch;
@@ -52,6 +56,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
     private Task? _keepAliveTask;
     private Task? _slideshowTask;
     private Task? _connectivityTask;
+    private PreparedSlide? _nextSlide;
 
     public PhotoboothWorkflow(
         IGoProClient gopro,
@@ -62,6 +67,7 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
         IOptions<TimingOptions> timings,
         IOptions<GoProOptions> goproOptions,
         IOptions<PrinterOptions> printerOptions,
+        IOptions<UiPerformanceOptions> uiPerformanceOptions,
         ILogger<PhotoboothWorkflow> log)
     {
         _gopro = gopro;
@@ -72,6 +78,8 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
         _timings = timings.Value;
         _goproOpt = goproOptions.Value;
         _printerOpt = printerOptions.Value;
+        _uiOpt = uiPerformanceOptions.Value;
+        _preparedDisplay = display as IPreparedPhotoDisplay;
         _log = log;
         _channel = Channel.CreateUnbounded<BoothCommand>(
             new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
@@ -597,33 +605,122 @@ public sealed class PhotoboothWorkflow : IAsyncDisposable, IBoothCommandSink
 
     private async Task ShowRandomSlideAsync(CancellationToken ct)
     {
+        if (!_uiOpt.EffectivePreloadNextSlide)
+        {
+            var direct = await PrepareRandomSlideAsync(ct, prepareForDisplay: false);
+            ShowSlideIfStillIdle(direct);
+            return;
+        }
+
+        var slide = _nextSlide ?? await PrepareRandomSlideAsync(ct, prepareForDisplay: true);
+        _nextSlide = null;
+        ShowSlideIfStillIdle(slide);
+
+        // Prepare the next image after the current one has been handed to the UI. This work happens off
+        // the visible transition path, so a slow GoPro download/decode is less likely to stutter the slide.
+        _nextSlide = await PrepareRandomSlideAsync(ct, prepareForDisplay: true);
+    }
+
+    private async Task<PreparedSlide?> PrepareRandomSlideAsync(CancellationToken ct, bool prepareForDisplay)
+    {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(_goproOpt.RequestTimeoutSeconds + 1));
 
         GoProMedia media;
         try { media = await _gopro.ListMediaAsync(cts.Token); }
-        catch (GoProUnavailableException) { return; } // stay quiet during the slideshow
+        catch (GoProUnavailableException) { return null; } // stay quiet during the slideshow
 
         var dir = media.Media.FirstOrDefault();
-        if (dir is null) return;
+        if (dir is null) return null;
         var images = dir.FileSystem.Where(f => !f.IsVideo).ToList();
-        if (images.Count == 0) return;
+        if (images.Count == 0) return null;
 
         var pick = images[_rand.Next(images.Count)];
+        var key = $"{dir.Directory}/{pick.FileName}";
+        var data = await GetSlideDataAsync(dir.Directory, pick.FileName, key, cts.Token);
+        if (data is null) return null;
+
+        if (prepareForDisplay && _preparedDisplay is not null)
+        {
+            var prepared = _preparedDisplay.PreparePhoto(data);
+            if (prepared is not null) return new PreparedSlide(prepared, null);
+        }
+
+        return new PreparedSlide(null, data);
+    }
+
+    private async Task<byte[]?> GetSlideDataAsync(string directory, string fileName, string key, CancellationToken ct)
+    {
+        if (_slideshowDataCache.TryGetValue(key, out var cached)) return cached;
+
         byte[] data;
-        try { data = await _gopro.DownloadMediaAsync(dir.Directory, pick.FileName, cts.Token); }
-        catch (GoProUnavailableException) { return; }
+        try { data = await _gopro.DownloadMediaAsync(directory, fileName, ct); }
+        catch (GoProUnavailableException) { return null; }
+
+        RememberSlideData(key, data);
+        return data;
+    }
+
+    private void RememberSlideData(string key, byte[] data)
+    {
+        if (!_uiOpt.EffectiveCacheSlideshowImages || _uiOpt.EffectiveSlideshowCacheSize <= 0 || _slideshowDataCache.ContainsKey(key)) return;
+
+        _slideshowDataCache[key] = data;
+        _slideshowDataCacheOrder.Enqueue(key);
+
+        while (_slideshowDataCache.Count > _uiOpt.EffectiveSlideshowCacheSize && _slideshowDataCacheOrder.TryDequeue(out var oldKey))
+            _slideshowDataCache.Remove(oldKey);
+    }
+
+    private void ShowSlideIfStillIdle(PreparedSlide? slide)
+    {
+        if (slide is null) return;
 
         var state = State;
         if (state is BoothState.Idle or BoothState.Degraded)
-            _display.ShowPhoto(data);
-        if (state == BoothState.Degraded)
-            Submit(new BoothCommand.Recovered());
+        {
+            slide.Show(_display, _preparedDisplay);
+            if (state == BoothState.Degraded)
+                Submit(new BoothCommand.Recovered());
+        }
+        else
+        {
+            slide.Dispose();
+        }
+    }
+
+    private sealed class PreparedSlide(IPreparedPhoto? preparedPhoto, byte[]? imageData) : IDisposable
+    {
+        private IPreparedPhoto? _preparedPhoto = preparedPhoto;
+        private byte[]? _imageData = imageData;
+
+        public void Show(IPhotoDisplay display, IPreparedPhotoDisplay? preparedDisplay)
+        {
+            if (_preparedPhoto is not null && preparedDisplay is not null)
+            {
+                var prepared = _preparedPhoto;
+                _preparedPhoto = null;
+                preparedDisplay.ShowPreparedPhoto(prepared);
+                return;
+            }
+
+            if (_imageData is not null)
+                display.ShowPhoto(_imageData);
+        }
+
+        public void Dispose()
+        {
+            _preparedPhoto?.Dispose();
+            _preparedPhoto = null;
+            _imageData = null;
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
+        _nextSlide?.Dispose();
+        _nextSlide = null;
         _lifetimeCts?.Dispose();
         _goproGate.Dispose();
     }

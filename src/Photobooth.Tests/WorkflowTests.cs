@@ -87,6 +87,23 @@ public class WorkflowTests
     }
 
     [Fact]
+    public async Task Slideshow_prepares_next_photo_before_visible_tick()
+    {
+        var scripted = new ScriptedGoProClient();
+        var rig = TestHarness.Build(scripted, tuneTimings: t => t.SlideshowIntervalSeconds = 1);
+        await rig.Workflow.StartAsync();
+        try
+        {
+            Assert.True(await TestHarness.WaitForAsync(
+                () => rig.Display.PreparedShowCount >= 1 && rig.Display.PreparedPhotoCount >= 2,
+                4000));
+            Assert.Equal(1, rig.Display.PhotoCount);
+            Assert.True(rig.Display.PreparedPhotoCount > rig.Display.PreparedShowCount);
+        }
+        finally { await rig.Workflow.DisposeAsync(); }
+    }
+
+    [Fact]
     public async Task Degraded_auto_recovers_when_GoPro_returns()
     {
         var scripted = new ScriptedGoProClient { ThrowOnList = true };

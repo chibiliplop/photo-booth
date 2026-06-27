@@ -12,7 +12,6 @@ public partial class MainView : UserControl
     // Must match the static RotateTransform angles in MainView.axaml (Card0, Card1, Card2).
     private static readonly double[] CardAngles = [-10.848, 7.0, -20.461];
 
-    private const double AnimDurationMs = 400.0;
     private const double AnimStartY     = 800.0;
 
     private readonly DispatcherTimer?[] _animTimers = new DispatcherTimer?[3];
@@ -95,9 +94,16 @@ public partial class MainView : UserControl
 
         _animTimers[cardIndex]?.Stop();
         _animTimers[cardIndex] = null;
+        rotate.Angle = CardAngles[cardIndex]; // static tilt, never animated
+
+        if (DataContext is MainViewModel { EnableSlideAnimation: false })
+        {
+            translate.Y = 0.0;
+            card.Opacity = 1.0;
+            return;
+        }
 
         translate.Y  = AnimStartY;
-        rotate.Angle = CardAngles[cardIndex]; // static tilt, never animated
         card.Opacity = 0.0;
 
         var startTime = DateTime.UtcNow;
@@ -110,7 +116,8 @@ public partial class MainView : UserControl
         timer.Tick += (_, _) =>
         {
             var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
-            var t       = Math.Min(elapsed / AnimDurationMs, 1.0);
+            var durationMs = DataContext is MainViewModel vm ? Math.Max(1, vm.PhotoSlideDurationMs) : 250;
+            var t       = Math.Min(elapsed / durationMs, 1.0);
 
             // EaseOutBack: slides up and slightly overshoots before settling — the "landing bump".
             translate.Y  = AnimStartY * (1.0 - EaseOutBack(t));

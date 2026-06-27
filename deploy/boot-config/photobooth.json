@@ -27,6 +27,37 @@
     "ScreenResolution": "1280x720"
   },
 
+
+
+  // =====================================================================
+  //  PERFORMANCE UI (AVANCE) - utile sur Raspberry Pi si le diaporama
+  //  manque de fluidite. Laissez "balanced" sauf diagnostic mainteneur.
+  // =====================================================================
+  "UiPerformance": {
+    // "pi" = reglages optimises Raspberry Pi. "balanced" = decode plus large.
+    "Mode": "pi",
+
+    // false par defaut : les ombres des cartes sont couteuses sur petit GPU/CPU.
+    "EnableCardShadows": false,
+
+    // true = anime le glissement de la nouvelle carte. false = apparition directe.
+    "EnableSlideAnimation": true,
+
+    // Duree du glissement en ms quand EnableSlideAnimation=true.
+    "SlideDurationMs": 250,
+
+    // Largeur de decodage des photos affichees. 640 est adapte aux cartes de l'UI.
+    "DecodeWidth": 640,
+
+    // false par defaut : avec beaucoup de photos, le cache a peu de chances de resservir.
+    "CacheSlideshowImages": false,
+
+    // Nombre de JPEG gardes en memoire si CacheSlideshowImages=true. 0 = aucun cache.
+    "SlideshowCacheSize": 0,
+
+    // true = prepare la prochaine photo du diaporama avant son affichage visible.
+    "PreloadNextSlide": true
+  },
   "Gopro": {
     // "http" = vraie GoPro pilotee en Wi-Fi (le jour J).
     // "fake" = MODE DEMO sans GoPro (fausses photos, pour tester a la maison).

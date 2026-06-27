@@ -28,6 +28,7 @@ internal static class ServiceConfiguration
         services.Configure<ThemeOptions>(config.GetSection(ThemeOptions.Section));
         services.Configure<PrinterOptions>(config.GetSection(PrinterOptions.Section));
         services.Configure<AdminOptions>(config.GetSection(AdminOptions.Section));
+        services.Configure<UiPerformanceOptions>(config.GetSection(UiPerformanceOptions.Section));
 
         services.AddLogging(b => b.AddSerilog(dispose: false));
 
@@ -80,7 +81,8 @@ internal static class ServiceConfiguration
             ?? sp.GetRequiredService<IOptions<TimingOptions>>().Value.Validate()
             ?? sp.GetRequiredService<IOptions<ThemeOptions>>().Value.Validate()
             ?? sp.GetRequiredService<IOptions<PrinterOptions>>().Value.Validate()
-            ?? sp.GetRequiredService<IOptions<AdminOptions>>().Value.Validate();
+            ?? sp.GetRequiredService<IOptions<AdminOptions>>().Value.Validate()
+            ?? sp.GetRequiredService<IOptions<UiPerformanceOptions>>().Value.Validate();
     }
 
     private static FakeGoProClient CreateFakeGoPro(IServiceProvider sp)

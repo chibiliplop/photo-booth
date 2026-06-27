@@ -7,8 +7,9 @@ namespace Photobooth.App.ViewModels;
 /// One of the three scattered photo cards. Content (image or text) cycles across the cards while each
 /// card keeps a fixed rotation in the view; the newest card is brought to the front via <see cref="ZIndex"/>.
 /// </summary>
-public sealed class CardViewModel : ViewModelBase
+public sealed class CardViewModel(bool enableCardShadows = true) : ViewModelBase
 {
+    private readonly bool _enableCardShadows = enableCardShadows;
     private Bitmap? _image;
     private string _message = string.Empty;
     private bool _isImageVisible;
@@ -50,7 +51,9 @@ public sealed class CardViewModel : ViewModelBase
     }
 
     // #UI-5: la carte active (ZIndex=100) reçoit une ombre plus profonde pour "sortir" de la pile.
-    public BoxShadows CardShadow => _zIndex == 100
-        ? BoxShadows.Parse("-15 15 35 0 #88000000")
-        : BoxShadows.Parse("-10 10 20 0 #66000000");
+    public BoxShadows CardShadow => !_enableCardShadows
+        ? default
+        : _zIndex == 100
+            ? BoxShadows.Parse("-15 15 35 0 #88000000")
+            : BoxShadows.Parse("-10 10 20 0 #66000000");
 }

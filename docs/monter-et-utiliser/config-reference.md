@@ -47,6 +47,21 @@ Fichier de texte brut, une clé par ligne, format `CLE=valeur`.
 | `AccentColor` | `"#000000"` | avancé | Couleur d'accentuation (hex) | aucune contrainte |
 | `ScreenResolution` | `"1280x720"` | opérateur | Canvas de design de l'interface au format `LARGEURxHAUTEUR` ; l'UI est mise à l'échelle (Viewbox) pour remplir l'écran HDMI réel | Format invalide ou dimension hors 320–7680 → **bandeau rouge**, démarrage en mode dégradé (fallback 1280×720) |
 
+### `UiPerformance` â fluiditÃ© du diaporama
+
+GÃ©rÃ© par le **mainteneur**. Sert Ã  adapter le coÃ»t de rendu, de dÃ©codage et de prÃ©chargement des photos sur Raspberry Pi sans recompiler ni reflasher l'image.
+
+| Champ | DÃ©faut (`appsettings.json`) | Qui Ã©dite | Effet | Validation |
+|---|---|---|---|---|
+| `Mode` | `"pi"` | mainteneur | `"pi"` = profil optimisÃ© Raspberry Pi ; `"balanced"` = comportement visuel plus large | doit valoir `balanced` ou `pi` |
+| `EnableCardShadows` | `false` | mainteneur | `true` = affiche les ombres des cartes photo ; `false` = les supprime pour allÃ©ger le rendu | aucune contrainte |
+| `EnableSlideAnimation` | `true` | mainteneur | `true` = anime le glissement de la nouvelle carte ; `false` = apparition directe | aucune contrainte |
+| `SlideDurationMs` | `250` | mainteneur | DurÃ©e du glissement en millisecondes quand `EnableSlideAnimation=true` | doit Ãªtre >= 0 |
+| `DecodeWidth` | `640` | mainteneur | Largeur cible de dÃ©codage des photos affichÃ©es ; `0` = automatique (`800` en `balanced`, `640` en `pi`) | doit Ãªtre `0` ou >= 320 |
+| `CacheSlideshowImages` | `false` | mainteneur | `true` = active le cache mÃ©moire des photos dÃ©jÃ  tÃ©lÃ©chargÃ©es ; laissÃ© Ã  `false` quand la GoPro contient beaucoup de photos | aucune contrainte |
+| `SlideshowCacheSize` | `0` | mainteneur | Nombre de JPEG gardÃ©s en mÃ©moire si `CacheSlideshowImages=true` ; `0` = aucun cache | doit Ãªtre >= 0 |
+| `PreloadNextSlide` | `true` | mainteneur | `true` = la prochaine photo du diaporama est tÃ©lÃ©chargÃ©e/dÃ©codÃ©e avant son affichage visible | aucune contrainte |
+
 ### `Gopro` — connexion à la caméra
 
 Édité par l'**opérateur** (champ `Mode`) ; les autres champs sont réservés à un usage avancé/mainteneur.
